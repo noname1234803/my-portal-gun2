@@ -1,5 +1,5 @@
 --==================================================
--- EVIL MORTY PORTAL GUN (ЖИВОЙ ПОРТАЛ + СЛЕДЫ + УСКОРЕНИЕ)
+-- EVIL MORTY PORTAL GUN (БЕЗ ЭФФЕКТОВ ТЕЛЕПОРТАЦИИ)
 -- FULL LOCAL SCRIPT
 --
 -- ПОРТАЛ С ИЗМЕНЯЕМЫМ ЦВЕТОМ (ползунок + кнопки)
@@ -8,6 +8,7 @@
 -- ЖИВАЯ ПУЛЬСАЦИЯ ПОРТАЛА
 -- СЛЕДЫ НА СТЕНАХ ПОСЛЕ ЗАКРЫТИЯ
 -- УСКОРЕНИЕ ПРИ ВЫХОДЕ ИЗ ПОРТАЛА
+-- БЕЗ ВСПЫШЕК И ЧАСТИЦ ПРИ ТЕЛЕПОРТАЦИИ
 --==================================================
 
 local Players = game:GetService("Players")
@@ -200,7 +201,7 @@ local function clearAllPortals()
 end
 
 --==================================================
--- СЛЕДЫ НА СТЕНАХ (функция создания следа)
+-- СЛЕДЫ НА СТЕНАХ
 --==================================================
 
 local function createWallMark(position, normal, color)
@@ -218,14 +219,12 @@ local function createWallMark(position, normal, color)
     mark.CFrame = CFrame.lookAt(position + normal * 0.03, position + normal) * CFrame.Angles(math.rad(90), 0, 0)
     mark.Parent = workspace
 
-    -- Добавляем слабое свечение
     local light = Instance.new("PointLight")
     light.Color = color
     light.Brightness = 0.3
     light.Range = 3
     light.Parent = mark
 
-    -- Анимация исчезновения (5 секунд)
     local fadeStart = tick()
     local fadeDuration = 5
 
@@ -636,72 +635,7 @@ local function create_portal(position, lookDirection, surfaceNormal, hitPart)
 end
 
 --==================================================
--- TELEPORT EFFECT + УСКОРЕНИЕ ПРИ ВЫХОДЕ
---==================================================
-
-local function spawnTeleportEffect(position, velocityImpulse)
-    local flash = Instance.new("Part")
-    flash.Name = "TeleportFlash"
-    flash.Shape = Enum.PartType.Ball
-    flash.Material = Enum.Material.Neon
-    flash.Color = portalColorLight
-    flash.Size = Vector3.new(2, 2, 2)
-    flash.Transparency = 0.3
-    flash.Anchored = true
-    flash.CanCollide = false
-    flash.CFrame = CFrame.new(position)
-    flash.Parent = workspace
-
-    local light = Instance.new("PointLight")
-    light.Color = portalColorLight
-    light.Brightness = 8
-    light.Range = 20
-    light.Parent = flash
-
-    local att = Instance.new("Attachment")
-    att.Parent = flash
-
-    local particles = Instance.new("ParticleEmitter")
-    particles.Texture = "rbxasset://textures/particles/sparkles_main.dds"
-    particles.Color = ColorSequence.new(portalColor)
-    particles.LightEmission = 0.8
-    particles.Rate = 0
-    particles.Lifetime = NumberRange.new(0.2, 0.5)
-    particles.Speed = NumberRange.new(1, 3)
-    particles.SpreadAngle = Vector2.new(360, 360)
-    particles.Size = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.5),
-        NumberSequenceKeypoint.new(1, 0)
-    })
-    particles.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.2),
-        NumberSequenceKeypoint.new(1, 1)
-    })
-    particles.Parent = att
-    particles:Emit(40)
-
-    -- Добавляем частицы, летящие в направлении импульса (если есть)
-    if velocityImpulse and velocityImpulse.Magnitude > 1 then
-        local dirParticles = particles:Clone()
-        dirParticles.Speed = NumberRange.new(2, 5)
-        dirParticles.VelocityInheritance = 0
-        dirParticles.Rate = 0
-        dirParticles:Emit(15)
-        dirParticles.Parent = att
-    end
-
-    TweenService:Create(flash, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-        Size = Vector3.new(8, 8, 8),
-        Transparency = 1
-    }):Play()
-
-    task.delay(0.7, function()
-        if flash then flash:Destroy() end
-    end)
-end
-
---==================================================
--- TWO WAY TELEPORT (С УСКОРЕНИЕМ И СЛЕДАМИ)
+-- TWO WAY TELEPORT (БЕЗ ЭФФЕКТОВ, С УСКОРЕНИЕМ И СЛЕДАМИ)
 --==================================================
 
 local function connectPortalTeleport(entrance, destination)
@@ -728,19 +662,15 @@ local function connectPortalTeleport(entrance, destination)
 			createWallMark(entrancePos, entranceNormal, portalColor)
 		end
 
-		spawnTeleportEffect(hrp.Position)
-
+		-- Телепортируем
 		local destinationCF = destination.CFrame
 		hrp.CFrame = destinationCF * CFrame.new(0, 0, -4)
 
 		-- УСКОРЕНИЕ ПРИ ВЫХОДЕ (импульс в направлении портала)
 		local impulseDirection = destination.CFrame.LookVector
-		local impulseStrength = 30  -- сила толчка
+		local impulseStrength = 30
 		hrp.AssemblyLinearVelocity = impulseDirection * impulseStrength
 		hrp.AssemblyAngularVelocity = Vector3.zero
-
-		task.wait(0.1)
-		spawnTeleportEffect(hrp.Position, impulseDirection * impulseStrength)
 
 		-- Создаём след на выходе
 		if destination.Parent then
@@ -802,7 +732,7 @@ local function isGunEquipped()
 end
 
 --==================================================
--- GUI (ГОРИЗОНТАЛЬНЫЙ, СВЕРХУ, С ПОЛЗУНКОМ И КНОПКАМИ ЦВЕТА)
+-- GUI (горизонтальный, сверху)
 --==================================================
 
 local gui = Instance.new("ScreenGui")
@@ -811,7 +741,7 @@ gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 gui.Parent = PlayerGui
 
--- Главное меню (горизонтальный фрейм)
+-- Главное меню
 local frame = Instance.new("Frame")
 frame.Size = UDim2.new(0, 750, 0, 155)
 frame.Position = UDim2.new(0.5, -375, 0, 20)
@@ -824,7 +754,7 @@ local frameCorner = Instance.new("UICorner")
 frameCorner.CornerRadius = UDim.new(0, 12)
 frameCorner.Parent = frame
 
--- HUD (текстовый статус)
+-- HUD (статус)
 local hud = Instance.new("TextLabel")
 hud.Size = UDim2.new(0, 400, 0, 30)
 hud.Position = UDim2.new(0.5, -200, 0, 185)
@@ -972,7 +902,7 @@ colorLabel.Font = Enum.Font.Gotham
 colorLabel.Parent = sliderBg
 
 --==================================================
--- ЛОГИКА РАБОТЫ ПОЛЗУНКА
+-- ЛОГИКА ПОЛЗУНКА
 --==================================================
 
 local dragging = false
@@ -1241,8 +1171,7 @@ local function firePlacePortal(placeId)
 		teleportDebounce = true
 		if portal_sound then portal_sound:Play() end
 
-		spawnTeleportEffect(hrp.Position)
-
+		-- Убираем эффект, только перемещаем
 		local success = pcall(function()
 			TeleportService:Teleport(placeId, LocalPlayer)
 		end)
