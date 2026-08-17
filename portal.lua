@@ -1,20 +1,21 @@
 --==================================================
--- EVIL MORTY PORTAL GUN
+-- RICK PRIME PORTAL GUN
+-- GREEN PORTAL VERSION
 -- FULL LOCAL SCRIPT
 --
--- GOLDEN PORTAL
--- TEXTURE + EXPAND ANIMATION (gold)
--- MUZZLE BEAM EFFECT (gold)
--- SPAWNS ON ANY SURFACE (floor / wall / ceiling)
--- SLOW ROTATION
--- LOCAL ONLY
--- NO REPLICATEDSTORAGE
--- NO SERVER SCRIPT
+-- ЗЕЛЁНЫЙ ПОРТАЛ
+-- ТЕКСТУРА + АНИМАЦИЯ РАСШИРЕНИЯ (зелёный)
+-- ЭФФЕКТ ЛУЧА (зелёный)
+-- ПОЯВЛЯЕТСЯ НА ЛЮБОЙ ПОВЕРХНОСТИ
+-- МЕДЛЕННОЕ ВРАЩЕНИЕ
+-- ЛОКАЛЬНЫЙ СКРИПТ
+-- БЕЗ ReplicatedStorage
+-- БЕЗ СЕРВЕРНОГО СКРИПТА
 --
--- POINT / PLAYER / PLACE
--- MOBILE + PC
--- RESPAWN SAFE (portals stay after respawn)
--- PERSISTENT INVENTORY
+-- РЕЖИМЫ: POINT / PLAYER / PLACE
+-- ПК + МОБИЛЬНЫЕ
+-- БЕЗОПАСНОСТЬ ПРИ РЕСПАВНЕ (порталы не удаляются)
+-- ПОСТОЯННЫЙ ИНВЕНТАРЬ
 --==================================================
 
 local Players = game:GetService("Players")
@@ -29,40 +30,41 @@ local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local Backpack = LocalPlayer:WaitForChild("Backpack")
 
 --==================================================
--- BLOOM EFFECT (soft yellow bloom for portals)
+-- BLOOM ЭФФЕКТ (мягкое зелёное свечение)
 --==================================================
 
 local bloom = Lighting:FindFirstChild("PortalBloom")
 if not bloom then
     bloom = Instance.new("BloomEffect")
     bloom.Name = "PortalBloom"
-    bloom.Intensity = 0.15
-    bloom.Threshold = 0.7
-    bloom.Size = 5
+    bloom.Intensity = 0.2
+    bloom.Threshold = 0.6
+    bloom.Size = 6
     bloom.Parent = Lighting
 end
 
 --==================================================
--- SETTINGS
+-- НАСТРОЙКИ
 --==================================================
 
-local PORTAL_TEXTURE = "rbxassetid://77878374203347"
+local PORTAL_TEXTURE = "rbxassetid://77878374203347" -- текстура остаётся, цвет задаётся через Decal
 
-local EVIL_MORTY_GOLD = Color3.fromRGB(255, 195, 35)
-local EVIL_MORTY_GOLD_LIGHT = Color3.fromRGB(255, 225, 90)
-local EVIL_MORTY_GOLD_DARK = Color3.fromRGB(210, 145, 10)
+-- Зелёная палитра
+local PORTAL_GREEN = Color3.fromRGB(0, 255, 65)
+local PORTAL_GREEN_LIGHT = Color3.fromRGB(80, 255, 130)
+local PORTAL_GREEN_DARK = Color3.fromRGB(0, 180, 40)
 
 local PORTAL_GUN_SOUND = "rbxassetid://1013378689"
 local PORTAL_SPAWN_SOUND = "rbxassetid://756847338"
 
 --==================================================
--- PLAYER PORTAL HEIGHT
+-- ВЫСОТА ПОРТАЛА ДЛЯ PLAYER
 --==================================================
 
 local PLAYER_PORTAL_HEIGHT = 1.0
 
 --==================================================
--- PORTAL VARIABLES
+-- ПЕРЕМЕННЫЕ ПОРТАЛОВ
 --==================================================
 
 local portalA = nil
@@ -77,7 +79,7 @@ local teleportDebounce = false
 local currentMode = "POINT"
 
 --==================================================
--- GUN VARIABLES
+-- ПЕРЕМЕННЫЕ ПУШКИ
 --==================================================
 
 local portal_gun = nil
@@ -85,65 +87,68 @@ local portal_sound = nil
 local Handle = nil
 
 --==================================================
--- MODEL
+-- МОДЕЛЬ ПУШКИ (переработанная под Рика Прайма)
 --==================================================
 
 local PARTS = {
+	-- Корпус (тёмно-зелёный)
 	{ Name = "Part", Size = Vector3.new(0.272445,0.197322,0.227038),
 		CFrame = CFrame.new(1.11402,1.00547,-10.9034, 1,0,0, 0,0,-1, 0,1,0),
-		Color = Color3.fromRGB(99,95,98), Shape = "Block" },
+		Color = Color3.fromRGB(30,60,30), Shape = "Block" },
+	-- Деталь (ярко-зелёная)
 	{ Name = "Part", Size = Vector3.new(0.272445,0.24273,0.454076),
 		CFrame = CFrame.new(1.06861,1.119,-11.1986, 1,0,0, 0,0,-1, 0,1,0),
-		Color = Color3.fromRGB(213,115,61), Shape = "Block" },
+		Color = Color3.fromRGB(0,200,50), Shape = "Block" },
 	{ Name = "Part", Size = Vector3.new(0.272445,0.197322,0.227038),
 		CFrame = CFrame.new(1.06861,1.119,-10.6442, 1,0,0, 0,0,-1, 0,1,0),
-		Color = Color3.fromRGB(99,95,98), Shape = "Block" },
+		Color = Color3.fromRGB(30,60,30), Shape = "Block" },
 	{ Name = "Part", Size = Vector3.new(0.454076,2.13416,0.36326),
 		CFrame = CFrame.new(1.06861,0.823826,-10.5174, 1,0,0, 0,0,-1, 0,1,0),
-		Color = Color3.fromRGB(255,176,0), Shape = "Block" },
+		Color = Color3.fromRGB(0,150,30), Shape = "Block" },
 	{ Name = "Part", Size = Vector3.new(0.590298,0.908151,0.0908151),
 		CFrame = CFrame.new(1.06861,1.20982,-10.3371, 0,1,0, 0.707107,0,0.707107, 0.707107,0,-0.707107),
-		Color = Color3.fromRGB(213,115,61), Shape = "Cylinder" },
+		Color = Color3.fromRGB(0,200,50), Shape = "Cylinder" },
+	-- Ручка (Handle) – чёрная с зелёным отливом
 	{ Name = "Handle", Size = Vector3.new(0.454076,0.908151,0.454077),
 		CFrame = CFrame.new(1.06861,0.454076,-10.8823, 1,0,0, 0,0.707107,-0.707107, 0,0.707107,0.707107),
-		Color = Color3.fromRGB(255,176,0), Shape = "Block" },
+		Color = Color3.fromRGB(20,40,20), Shape = "Block" },
 	{ Name = "Part", Size = Vector3.new(0.23219,0.136223,0.0454076),
 		CFrame = CFrame.new(0.932386,0.560068,-10.3782, 0,0,-1, -0.707107,0.707107,0, 0.707107,0.707107,0),
-		Color = Color3.fromRGB(255,176,0), Shape = "Block" },
+		Color = Color3.fromRGB(0,200,50), Shape = "Block" },
 	{ Name = "Part", Size = Vector3.new(0.908151,0.908151,0.227038),
 		CFrame = CFrame.new(1.02154,1.20982,-10.0633, 0,1,0, 0.965926,0,-0.258819, -0.258819,0,-0.965926),
-		Color = Color3.fromRGB(255,255,0), Shape = "Cylinder" },
+		Color = Color3.fromRGB(0,255,65), Shape = "Cylinder" },
 	{ Name = "Part", Size = Vector3.new(0.0537722,0.908151,0.358481),
 		CFrame = CFrame.new(1.02154,1.62249,-10.1739, 0,1,0, 0.965926,0,-0.258819, -0.258819,0,-0.965926),
-		Color = Color3.fromRGB(255,255,0), Shape = "Cylinder" },
+		Color = Color3.fromRGB(0,255,65), Shape = "Cylinder" },
 	{ Name = "Part", Size = Vector3.new(0.795168,0.726521,0.862743),
 		CFrame = CFrame.new(1.06861,0.993849,-9.58647, -0,0,-1, -1,0,0, 0,1,0),
-		Color = Color3.fromRGB(255,176,0), Shape = "Block" },
+		Color = Color3.fromRGB(0,150,30), Shape = "Block" },
 	{ Name = "Part", Size = Vector3.new(0.317853,0.317853,0.317853),
 		CFrame = CFrame.new(0.728048,0.993849,-9.54345, 1,0,0, 0,1,0, 0,0,1),
-		Color = Color3.fromRGB(13,105,172), Shape = "Ball" },
+		Color = Color3.fromRGB(0,255,65), Shape = "Ball" },
 	{ Name = "Part", Size = Vector3.new(0.317853,0.317853,0.317853),
 		CFrame = CFrame.new(1.09131,0.993845,-9.2459, 1,0,0, 0,1,0, 0,0,1),
-		Color = Color3.fromRGB(255,255,0), Shape = "Ball" },
+		Color = Color3.fromRGB(0,255,65), Shape = "Ball" },
 	{ Name = "Part", Size = Vector3.new(0.795168,0.862743,0.136223),
 		CFrame = CFrame.new(0.705344,0.993846,-9.51836, -0,0,-1, -1,0,0, 0,1,0),
-		Color = Color3.fromRGB(255,176,0), Shape = "Block" },
+		Color = Color3.fromRGB(0,150,30), Shape = "Block" },
 	{ Name = "Part", Size = Vector3.new(0.114055,0.862743,0.862743),
 		CFrame = CFrame.new(1.06873,0.653257,-9.51836, -0,0,-1, -1,0,0, 0,1,0),
-		Color = Color3.fromRGB(255,176,0), Shape = "Block" },
+		Color = Color3.fromRGB(0,200,50), Shape = "Block" },
 	{ Name = "Part", Size = Vector3.new(0.795168,0.862743,0.136223),
 		CFrame = CFrame.new(1.43186,0.993846,-9.51836, 0,0,-1, -1,0,0, 0,1,0),
-		Color = Color3.fromRGB(255,176,0), Shape = "Block" },
+		Color = Color3.fromRGB(0,150,30), Shape = "Block" },
 	{ Name = "Part", Size = Vector3.new(0.114055,0.862743,0.862743),
 		CFrame = CFrame.new(1.06873,1.33495,-9.51836, 0,0,-1, -1,0,0, 0,1,0),
-		Color = Color3.fromRGB(255,176,0), Shape = "Block" },
+		Color = Color3.fromRGB(0,200,50), Shape = "Block" },
 	{ Name = "Part", Size = Vector3.new(0.454076,0.375442,0.5),
 		CFrame = CFrame.new(1.06861,0.817736,-11.8345, 0,0,1, 0,1,0, -1,0,0),
-		Color = Color3.fromRGB(255,176,0), Shape = "Wedge" },
+		Color = Color3.fromRGB(0,150,30), Shape = "Wedge" },
 }
 
 --==================================================
--- BACKPACK
+-- РЮКЗАК
 --==================================================
 
 local function getBackpack()
@@ -152,7 +157,7 @@ local function getBackpack()
 end
 
 --==================================================
--- REMOVE OLD GUNS
+-- УДАЛЕНИЕ СТАРЫХ ПУШЕК
 --==================================================
 
 local function removeOldGuns()
@@ -160,7 +165,7 @@ local function removeOldGuns()
 	for _, container in ipairs({ backpack, LocalPlayer.Character }) do
 		if container then
 			for _, obj in ipairs(container:GetChildren()) do
-				if obj:IsA("Tool") and (obj.Name == "Portal_Gun" or obj.Name == "EVIL_MORTY_PORTAL_GUN") then
+				if obj:IsA("Tool") and (obj.Name == "Portal_Gun" or obj.Name == "EVIL_MORTY_PORTAL_GUN" or obj.Name == "RICK_PRIME_PORTAL_GUN") then
 					obj:Destroy()
 				end
 			end
@@ -171,16 +176,18 @@ end
 removeOldGuns()
 
 --==================================================
--- CLEAR GUI
+-- ОЧИСТКА GUI
 --==================================================
 
 local oldGui = PlayerGui:FindFirstChild("evil_morty_portal_GUI")
 if oldGui then oldGui:Destroy() end
 local oldRickGui = PlayerGui:FindFirstChild("rick_portal_GUI")
 if oldRickGui then oldRickGui:Destroy() end
+local oldPrimeGui = PlayerGui:FindFirstChild("RickPrimePortalGUI")
+if oldPrimeGui then oldPrimeGui:Destroy() end
 
 --==================================================
--- PORTAL CLEANUP
+-- ОЧИСТКА ПОРТАЛОВ
 --==================================================
 
 local function destroyPortal(portal)
@@ -206,7 +213,7 @@ local function clearAllPortals()
 end
 
 --==================================================
--- CREATE GUN
+-- СОЗДАНИЕ ПУШКИ
 --==================================================
 
 local function createGun()
@@ -219,7 +226,7 @@ local function createGun()
 	portal_sound = nil
 
 	portal_gun = Instance.new("Tool")
-	portal_gun.Name = "EVIL_MORTY_PORTAL_GUN"
+	portal_gun.Name = "RICK_PRIME_PORTAL_GUN"
 	portal_gun.RequiresHandle = true
 	portal_gun.CanBeDropped = false
 
@@ -293,10 +300,11 @@ local function createGun()
 	portal_sound.Volume = 2.5
 	portal_sound.Parent = Handle
 
+	-- Жидкость внутри (зелёная)
 	local liquidBase
 	for _, obj in ipairs(portal_gun:GetChildren()) do
 		if obj:IsA("Part") and obj ~= Handle and obj.Shape == Enum.PartType.Cylinder then
-			if obj.Color == Color3.fromRGB(255, 255, 0) then
+			if obj.Color == Color3.fromRGB(0, 255, 65) then
 				liquidBase = obj
 				break
 			end
@@ -305,10 +313,10 @@ local function createGun()
 
 	if liquidBase then
 		local liquid = Instance.new("Part")
-		liquid.Name = "AnimatedEvilMortyLiquid"
+		liquid.Name = "AnimatedPrimeLiquid"
 		liquid.Shape = Enum.PartType.Cylinder
 		liquid.Size = Vector3.new(0.12, 0.22, 0.12)
-		liquid.Color = EVIL_MORTY_GOLD
+		liquid.Color = PORTAL_GREEN
 		liquid.Material = Enum.Material.Neon
 		liquid.Transparency = 0.05
 		liquid.CanCollide = false
@@ -326,7 +334,7 @@ local function createGun()
 		liquidWeld.Parent = liquidBase
 
 		local liquidLight = Instance.new("PointLight")
-		liquidLight.Color = EVIL_MORTY_GOLD_LIGHT
+		liquidLight.Color = PORTAL_GREEN_LIGHT
 		liquidLight.Brightness = 3
 		liquidLight.Range = 5
 		liquidLight.Parent = liquid
@@ -350,10 +358,10 @@ local function muzzleFlash()
 	if not Handle then return end
 
 	local flash = Instance.new("Part")
-	flash.Name = "EvilMortyMuzzleFlash"
+	flash.Name = "PrimeMuzzleFlash"
 	flash.Shape = Enum.PartType.Ball
 	flash.Material = Enum.Material.Neon
-	flash.Color = EVIL_MORTY_GOLD_LIGHT
+	flash.Color = PORTAL_GREEN_LIGHT
 	flash.Size = Vector3.new(0.35, 0.35, 0.35)
 	flash.Transparency = 0
 	flash.CanCollide = false
@@ -364,7 +372,7 @@ local function muzzleFlash()
 	flash.Parent = workspace
 
 	local light = Instance.new("PointLight")
-	light.Color = EVIL_MORTY_GOLD_LIGHT
+	light.Color = PORTAL_GREEN_LIGHT
 	light.Brightness = 7
 	light.Range = 10
 	light.Parent = flash
@@ -390,20 +398,20 @@ local function createBeam(startPos, endPos)
 	if distance < 0.05 then return end
 
 	local beam = Instance.new("Part")
-	beam.Name = "EvilMortyPortalBeam"
+	beam.Name = "PrimePortalBeam"
 	beam.Anchored = true
 	beam.CanCollide = false
 	beam.CanTouch = false
 	beam.CanQuery = false
 	beam.CastShadow = false
 	beam.Material = Enum.Material.Neon
-	beam.Color = EVIL_MORTY_GOLD
+	beam.Color = PORTAL_GREEN
 	beam.Size = Vector3.new(0.18, 0.18, distance)
 	beam.CFrame = CFrame.lookAt(startPos, endPos) * CFrame.new(0, 0, -distance / 2)
 	beam.Parent = workspace
 
 	local light = Instance.new("PointLight")
-	light.Color = EVIL_MORTY_GOLD_LIGHT
+	light.Color = PORTAL_GREEN_LIGHT
 	light.Brightness = 2
 	light.Range = 6
 	light.Parent = beam
@@ -419,14 +427,14 @@ local function createBeam(startPos, endPos)
 end
 
 --==================================================
--- PORTAL SOUND
+-- ЗВУК ПОРТАЛА
 --==================================================
 
 local function playPortalSpawnSound(portal)
 	if not portal then return end
 
 	local sound = Instance.new("Sound")
-	sound.Name = "EvilMortyPortalSpawnSound"
+	sound.Name = "PrimePortalSpawnSound"
 	sound.SoundId = PORTAL_SPAWN_SOUND
 	sound.Volume = 2
 	sound.RollOffMode = Enum.RollOffMode.Inverse
@@ -443,12 +451,12 @@ local function playPortalSpawnSound(portal)
 end
 
 --==================================================
--- CREATE PORTAL (увеличен в 1.5 раза)
+-- СОЗДАНИЕ ПОРТАЛА (зелёный, увеличен в 1.5)
 --==================================================
 
 local function create_portal(position, lookDirection, surfaceNormal)
 	local portal = Instance.new("Part")
-	portal.Name = "EvilMortyGoldenPortal"
+	portal.Name = "PrimeGreenPortal"
 	portal.Size = Vector3.new(0.6, 0.6, 0.6)
 	portal.Transparency = 1
 	portal.Anchored = true
@@ -493,7 +501,7 @@ local function create_portal(position, lookDirection, surfaceNormal)
 	front.Name = "PortalTextureFront"
 	front.Face = Enum.NormalId.Front
 	front.Texture = PORTAL_TEXTURE
-	front.Color3 = EVIL_MORTY_GOLD
+	front.Color3 = PORTAL_GREEN
 	front.Transparency = 0
 	front.Parent = surface
 
@@ -501,26 +509,26 @@ local function create_portal(position, lookDirection, surfaceNormal)
 	back.Name = "PortalTextureBack"
 	back.Face = Enum.NormalId.Back
 	back.Texture = PORTAL_TEXTURE
-	back.Color3 = EVIL_MORTY_GOLD
+	back.Color3 = PORTAL_GREEN
 	back.Transparency = 0
 	back.Parent = surface
 
 	local light = Instance.new("PointLight")
-	light.Name = "SoftGoldenPortalLight"
-	light.Color = EVIL_MORTY_GOLD_LIGHT
+	light.Name = "SoftGreenPortalLight"
+	light.Color = PORTAL_GREEN_LIGHT
 	light.Brightness = 0.2
 	light.Range = 8
 	light.Shadows = false
 	light.Parent = surface
 
 	local attachment = Instance.new("Attachment")
-	attachment.Name = "EvilMortyPortalAttachment"
+	attachment.Name = "PrimePortalAttachment"
 	attachment.Parent = surface
 
 	local particles = Instance.new("ParticleEmitter")
-	particles.Name = "GoldenPortalParticles"
+	particles.Name = "GreenPortalParticles"
 	particles.Texture = "rbxasset://textures/particles/sparkles_main.dds"
-	particles.Color = ColorSequence.new(EVIL_MORTY_GOLD)
+	particles.Color = ColorSequence.new(PORTAL_GREEN)
 	particles.LightEmission = 0.7
 	particles.Rate = 0
 	particles.Lifetime = NumberRange.new(0.35, 0.7)
@@ -580,7 +588,7 @@ local function create_portal(position, lookDirection, surfaceNormal)
 end
 
 --==================================================
--- TELEPORT EFFECT
+-- ЭФФЕКТ ТЕЛЕПОРТАЦИИ
 --==================================================
 
 local function spawnTeleportEffect(position)
@@ -588,7 +596,7 @@ local function spawnTeleportEffect(position)
     flash.Name = "TeleportFlash"
     flash.Shape = Enum.PartType.Ball
     flash.Material = Enum.Material.Neon
-    flash.Color = EVIL_MORTY_GOLD_LIGHT
+    flash.Color = PORTAL_GREEN_LIGHT
     flash.Size = Vector3.new(2, 2, 2)
     flash.Transparency = 0.3
     flash.Anchored = true
@@ -597,7 +605,7 @@ local function spawnTeleportEffect(position)
     flash.Parent = workspace
 
     local light = Instance.new("PointLight")
-    light.Color = EVIL_MORTY_GOLD_LIGHT
+    light.Color = PORTAL_GREEN_LIGHT
     light.Brightness = 8
     light.Range = 20
     light.Parent = flash
@@ -607,7 +615,7 @@ local function spawnTeleportEffect(position)
 
     local particles = Instance.new("ParticleEmitter")
     particles.Texture = "rbxasset://textures/particles/sparkles_main.dds"
-    particles.Color = ColorSequence.new(EVIL_MORTY_GOLD)
+    particles.Color = ColorSequence.new(PORTAL_GREEN)
     particles.LightEmission = 0.8
     particles.Rate = 0
     particles.Lifetime = NumberRange.new(0.2, 0.5)
@@ -635,7 +643,7 @@ local function spawnTeleportEffect(position)
 end
 
 --==================================================
--- TWO WAY TELEPORT
+-- ДВУСТОРОННЯЯ ТЕЛЕПОРТАЦИЯ
 --==================================================
 
 local function connectPortalTeleport(entrance, destination)
@@ -672,7 +680,7 @@ local function connectPortalTeleport(entrance, destination)
 end
 
 --==================================================
--- PORTAL PAIR
+-- ПАРА ПОРТАЛОВ
 --==================================================
 
 local function createPortalPair(pointDataA, pointDataB)
@@ -686,7 +694,7 @@ local function createPortalPair(pointDataA, pointDataB)
 end
 
 --==================================================
--- SCREEN RAYCAST
+-- РЕЙКАСТ С ЭКРАНА
 --==================================================
 
 local function raycastFromScreen(screenPosition)
@@ -710,63 +718,175 @@ local function raycastFromScreen(screenPosition)
 end
 
 --==================================================
--- GUI
+-- ГЛАВНОЕ МЕНЮ (GUI) — ЗЕЛЁНАЯ ТЕМА РИКА ПРАЙМА
 --==================================================
 
 local gui = Instance.new("ScreenGui")
-gui.Name = "evil_morty_portal_GUI"
+gui.Name = "RickPrimePortalGUI"
 gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 gui.Parent = PlayerGui
 
--- Прицел (круг)
-local crosshair = Instance.new("Frame")
-crosshair.Name = "Crosshair"
-crosshair.Size = UDim2.new(0, 24, 0, 24)
-crosshair.Position = UDim2.new(0.5, -12, 0.5, -12)
-crosshair.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-crosshair.BackgroundTransparency = 0.5
-crosshair.BorderSizePixel = 0
-crosshair.Parent = gui
-
-local crosshairCorner = Instance.new("UICorner")
-crosshairCorner.CornerRadius = UDim.new(1, 0)
-crosshairCorner.Parent = crosshair
-
-local crosshairOutline = Instance.new("Frame")
-crosshairOutline.Name = "Outline"
-crosshairOutline.Size = UDim2.new(0, 28, 0, 28)
-crosshairOutline.Position = UDim2.new(0.5, -14, 0.5, -14)
-crosshairOutline.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-crosshairOutline.BackgroundTransparency = 0.7
-crosshairOutline.BorderSizePixel = 0
-crosshairOutline.Parent = gui
-
-local outlineCorner = Instance.new("UICorner")
-outlineCorner.CornerRadius = UDim.new(1, 0)
-outlineCorner.Parent = crosshairOutline
-
--- Главное меню
+-- ====== ФОН МЕНЮ ======
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 340, 0, 350)
-frame.Position = UDim2.new(0.5, -170, 0.5, -175)
-frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-frame.BackgroundTransparency = 0.1
-frame.BorderSizePixel = 0
+frame.Size = UDim2.new(0, 420, 0, 420)
+frame.Position = UDim2.new(0.5, -210, 0.5, -210)
+frame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+frame.BackgroundTransparency = 0.15
+frame.BorderSizePixel = 2
+frame.BorderColor3 = Color3.fromRGB(0, 255, 65)
 frame.Parent = gui
 
+local glowBorder = Instance.new("Frame")
+glowBorder.Size = UDim2.new(1, -6, 1, -6)
+glowBorder.Position = UDim2.new(0, 3, 0, 3)
+glowBorder.BackgroundTransparency = 1
+glowBorder.BorderSizePixel = 1
+glowBorder.BorderColor3 = Color3.fromRGB(0, 200, 50)
+glowBorder.Parent = frame
+
 local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 14)
+corner.CornerRadius = UDim.new(0, 12)
 corner.Parent = frame
 
+-- ====== ЗАГОЛОВОК ======
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 50)
+title.Position = UDim2.new(0, 0, 0, 10)
+title.BackgroundTransparency = 1
+title.TextColor3 = Color3.fromRGB(0, 255, 65)
+title.Text = "RICK PRIME"
+title.TextScaled = true
+title.Font = Enum.Font.GothamBold
+title.Parent = frame
+
+local subtitle = Instance.new("TextLabel")
+subtitle.Size = UDim2.new(1, 0, 0, 30)
+subtitle.Position = UDim2.new(0, 0, 0, 55)
+subtitle.BackgroundTransparency = 1
+subtitle.TextColor3 = Color3.fromRGB(120, 255, 150)
+subtitle.Text = "PORTAL GUN"
+subtitle.TextScaled = true
+subtitle.Font = Enum.Font.Gotham
+subtitle.Parent = frame
+
+-- ====== КНОПКИ РЕЖИМОВ ======
+local function makeGreenButton(text, x, y, width, isActive)
+	local btn = Instance.new("TextButton")
+	btn.Size = UDim2.new(0, width or 100, 0, 40)
+	btn.Position = UDim2.new(0, x, 0, y)
+	btn.BackgroundColor3 = isActive and Color3.fromRGB(0, 200, 50) or Color3.fromRGB(0, 40, 20)
+	btn.BorderSizePixel = 1
+	btn.BorderColor3 = Color3.fromRGB(0, 255, 65)
+	btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	btn.Text = text
+	btn.TextScaled = true
+	btn.Font = Enum.Font.GothamBold
+	btn.Parent = frame
+
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0, 6)
+	c.Parent = btn
+
+	btn.MouseEnter:Connect(function()
+		btn.BackgroundColor3 = Color3.fromRGB(0, 120, 40)
+	end)
+	btn.MouseLeave:Connect(function()
+		if not isActive then
+			btn.BackgroundColor3 = Color3.fromRGB(0, 40, 20)
+		else
+			btn.BackgroundColor3 = Color3.fromRGB(0, 200, 50)
+		end
+	end)
+
+	return btn
+end
+
+local pointBtn = makeGreenButton("POINT", 15, 110, 120, true)
+local playerBtn = makeGreenButton("PLAYER", 150, 110, 120, false)
+local placeBtn = makeGreenButton("PLACE", 285, 110, 120, false)
+
+-- ====== ПОЛЕ ВВОДА ======
+local input = Instance.new("TextBox")
+input.Size = UDim2.new(0, 390, 0, 45)
+input.Position = UDim2.new(0, 15, 0, 170)
+input.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+input.BackgroundTransparency = 0.4
+input.BorderSizePixel = 1
+input.BorderColor3 = Color3.fromRGB(0, 200, 50)
+input.TextColor3 = Color3.fromRGB(200, 255, 200)
+input.PlaceholderColor3 = Color3.fromRGB(100, 150, 100)
+input.PlaceholderText = "Player name / Place ID"
+input.Text = ""
+input.TextScaled = true
+input.Font = Enum.Font.Gotham
+input.Parent = frame
+
+local inputCorner = Instance.new("UICorner")
+inputCorner.CornerRadius = UDim.new(0, 6)
+inputCorner.Parent = input
+
+-- ====== КНОПКА FIRE ======
+local fireBtn = Instance.new("TextButton")
+fireBtn.Size = UDim2.new(0, 390, 0, 60)
+fireBtn.Position = UDim2.new(0, 15, 0, 230)
+fireBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 50)
+fireBtn.BorderSizePixel = 2
+fireBtn.BorderColor3 = Color3.fromRGB(0, 255, 65)
+fireBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+fireBtn.Text = "FIRE"
+fireBtn.TextScaled = true
+fireBtn.Font = Enum.Font.GothamBold
+fireBtn.Parent = frame
+
+local fireCorner = Instance.new("UICorner")
+fireCorner.CornerRadius = UDim.new(0, 10)
+fireCorner.Parent = fireBtn
+
+task.spawn(function()
+	while fireBtn and fireBtn.Parent do
+		fireBtn.BackgroundColor3 = Color3.fromRGB(0, 200 + math.random(-20, 20), 50)
+		task.wait(0.5)
+	end
+end)
+
+-- ====== СТРОКА СТАТУСА ======
+local status = Instance.new("TextLabel")
+status.Size = UDim2.new(0, 390, 0, 40)
+status.Position = UDim2.new(0, 15, 0, 305)
+status.BackgroundTransparency = 1
+status.TextColor3 = Color3.fromRGB(0, 255, 65)
+status.Text = "POINT: FIRE → A → B"
+status.TextScaled = true
+status.Font = Enum.Font.Gotham
+status.Parent = frame
+
+-- ====== КНОПКА RESET ======
+local resetBtn = Instance.new("TextButton")
+resetBtn.Size = UDim2.new(0, 390, 0, 40)
+resetBtn.Position = UDim2.new(0, 15, 0, 355)
+resetBtn.BackgroundColor3 = Color3.fromRGB(0, 30, 15)
+resetBtn.BorderSizePixel = 1
+resetBtn.BorderColor3 = Color3.fromRGB(0, 120, 40)
+resetBtn.TextColor3 = Color3.fromRGB(150, 255, 150)
+resetBtn.Text = "RESET PORTALS"
+resetBtn.TextScaled = true
+resetBtn.Font = Enum.Font.GothamBold
+resetBtn.Parent = frame
+
+local resetCorner = Instance.new("UICorner")
+resetCorner.CornerRadius = UDim.new(0, 6)
+resetCorner.Parent = resetBtn
+
+-- ====== ПЕРЕКЛЮЧАТЕЛЬ МЕНЮ (бургер/крестик) ======
 local menuToggle = Instance.new("TextButton")
 menuToggle.Name = "MenuToggle"
-menuToggle.Size = UDim2.new(0, 60, 0, 60)
-menuToggle.Position = UDim2.new(0, 15, 1, -80)
-menuToggle.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-menuToggle.BackgroundTransparency = 0.1
-menuToggle.BorderSizePixel = 0
-menuToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+menuToggle.Size = UDim2.new(0, 50, 0, 50)
+menuToggle.Position = UDim2.new(0, 15, 1, -65)
+menuToggle.BackgroundColor3 = Color3.fromRGB(0, 40, 20)
+menuToggle.BorderSizePixel = 1
+menuToggle.BorderColor3 = Color3.fromRGB(0, 200, 50)
+menuToggle.TextColor3 = Color3.fromRGB(0, 255, 65)
 menuToggle.Text = "✕"
 menuToggle.TextScaled = true
 menuToggle.Font = Enum.Font.GothamBold
@@ -783,88 +903,18 @@ menuToggle.Activated:Connect(function()
 	menuToggle.Text = menuOpen and "✕" or "☰"
 end)
 
-local function makeButton(text, x, color)
-	local button = Instance.new("TextButton")
-	button.Size = UDim2.new(0, 100, 0, 38)
-	button.Position = UDim2.new(0, x, 0, 10)
-	button.BackgroundColor3 = color
-	button.BorderSizePixel = 0
-	button.TextColor3 = Color3.fromRGB(255, 255, 255)
-	button.Text = text
-	button.TextScaled = true
-	button.Font = Enum.Font.GothamBold
-	button.Parent = frame
-
-	local c = Instance.new("UICorner")
-	c.CornerRadius = UDim.new(0, 8)
-	c.Parent = button
-
-	return button
-end
-
-local pointButton = makeButton("POINT", 10, Color3.fromRGB(180, 125, 10))
-local playerButton = makeButton("PLAYER", 120, Color3.fromRGB(180, 125, 10))
-local placeButton = makeButton("PLACE", 230, Color3.fromRGB(180, 125, 10))
-
-local input = Instance.new("TextBox")
-input.Size = UDim2.new(0, 320, 0, 45)
-input.Position = UDim2.new(0, 10, 0, 60)
-input.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-input.BackgroundTransparency = 0.35
-input.BorderSizePixel = 0
-input.TextColor3 = Color3.fromRGB(255, 255, 255)
-input.PlaceholderColor3 = Color3.fromRGB(170, 170, 170)
-input.PlaceholderText = "Player name / Place ID"
-input.Text = ""
-input.TextScaled = true
-input.Parent = frame
-
-local inputCorner = Instance.new("UICorner")
-inputCorner.CornerRadius = UDim.new(0, 8)
-inputCorner.Parent = input
-
-local fireButton = Instance.new("TextButton")
-fireButton.Size = UDim2.new(0, 320, 0, 55)
-fireButton.Position = UDim2.new(0, 10, 0, 115)
-fireButton.BackgroundColor3 = EVIL_MORTY_GOLD_DARK
-fireButton.BorderSizePixel = 0
-fireButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-fireButton.Text = "FIRE"
-fireButton.TextScaled = true
-fireButton.Font = Enum.Font.GothamBold
-fireButton.Parent = frame
-
-local fireCorner = Instance.new("UICorner")
-fireCorner.CornerRadius = UDim.new(0, 10)
-fireCorner.Parent = fireButton
-
-local status = Instance.new("TextLabel")
-status.Size = UDim2.new(0, 320, 0, 45)
-status.Position = UDim2.new(0, 10, 0, 180)
-status.BackgroundTransparency = 1
-status.TextColor3 = EVIL_MORTY_GOLD_LIGHT
-status.Text = "POINT: FIRE → A → B"
-status.TextScaled = true
-status.Font = Enum.Font.Gotham
-status.Parent = frame
-
-local resetButton = Instance.new("TextButton")
-resetButton.Size = UDim2.new(0, 320, 0, 45)
-resetButton.Position = UDim2.new(0, 10, 0, 235)
-resetButton.BackgroundColor3 = Color3.fromRGB(100, 55, 10)
-resetButton.BorderSizePixel = 0
-resetButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-resetButton.Text = "RESET PORTALS"
-resetButton.TextScaled = true
-resetButton.Font = Enum.Font.GothamBold
-resetButton.Parent = frame
-
-local resetCorner = Instance.new("UICorner")
-resetCorner.CornerRadius = UDim.new(0, 8)
-resetCorner.Parent = resetButton
+-- ====== ЗАКРЫТИЕ ПО ALT ======
+UserInputService.InputBegan:Connect(function(input, processed)
+    if processed then return end
+    if input.KeyCode == Enum.KeyCode.LeftAlt or input.KeyCode == Enum.KeyCode.RightAlt then
+        menuOpen = not menuOpen
+        frame.Visible = menuOpen
+        menuToggle.Text = menuOpen and "✕" or "☰"
+    end
+end)
 
 --==================================================
--- POINT SELECTION
+-- ВЫБОР ТОЧКИ
 --==================================================
 
 local function startPointSelection()
@@ -916,7 +966,7 @@ local function setPoint(position, normal)
 end
 
 --==================================================
--- FIND PLAYER
+-- ПОИСК ИГРОКА
 --==================================================
 
 local function findPlayer(name)
@@ -938,7 +988,7 @@ local function findPlayer(name)
 end
 
 --==================================================
--- PLAYER PORTAL
+-- ПОРТАЛ К ИГРОКУ
 --==================================================
 
 local function firePlayerPortal(playerName)
@@ -974,7 +1024,7 @@ local function firePlayerPortal(playerName)
 end
 
 --==================================================
--- PLACE PORTAL
+-- ПОРТАЛ НА МЕСТО
 --==================================================
 
 local function firePlacePortal(placeId)
@@ -1021,7 +1071,7 @@ local function firePlacePortal(placeId)
 end
 
 --==================================================
--- MODE
+-- УСТАНОВКА РЕЖИМА
 --==================================================
 
 local function setMode(mode)
@@ -1029,7 +1079,7 @@ local function setMode(mode)
 	currentMode = mode
 
 	if mode == "POINT" then
-		status.Text = "POINT: FIRE → TAP A → TAP B"
+		status.Text = "POINT: FIRE → A → B"
 		input.PlaceholderText = "Point mode"
 	elseif mode == "PLAYER" then
 		status.Text = "PLAYER: ENTER NAME → FIRE"
@@ -1041,7 +1091,7 @@ local function setMode(mode)
 end
 
 --==================================================
--- FIRE
+-- ВЫСТРЕЛ
 --==================================================
 
 local function fire()
@@ -1052,7 +1102,7 @@ local function fire()
 		end
 
 		local success = firePlayerPortal(input.Text)
-		status.Text = success and "ENTER THE GOLDEN PORTAL" or "PLAYER NOT FOUND"
+		status.Text = success and "ENTER THE GREEN PORTAL" or "PLAYER NOT FOUND"
 		return
 	end
 
@@ -1063,7 +1113,7 @@ local function fire()
 		end
 
 		local success = firePlacePortal(input.Text)
-		status.Text = success and "ENTER THE GOLDEN PORTAL" or "INVALID PLACE ID"
+		status.Text = success and "ENTER THE GREEN PORTAL" or "INVALID PLACE ID"
 		return
 	end
 
@@ -1077,16 +1127,16 @@ local function fire()
 end
 
 --==================================================
--- BUTTON CONNECTIONS
+-- ПРИВЯЗКА КНОПОК
 --==================================================
 
-pointButton.Activated:Connect(function() setMode("POINT") end)
-playerButton.Activated:Connect(function() setMode("PLAYER") end)
-placeButton.Activated:Connect(function() setMode("PLACE") end)
-fireButton.Activated:Connect(function() fire() end)
+pointBtn.Activated:Connect(function() setMode("POINT") end)
+playerBtn.Activated:Connect(function() setMode("PLAYER") end)
+placeBtn.Activated:Connect(function() setMode("PLACE") end)
+fireBtn.Activated:Connect(function() fire() end)
 
 --==================================================
--- TOOL
+-- ПРИВЯЗКА К ИНСТРУМЕНТУ
 --==================================================
 
 local function connectTool()
@@ -1095,14 +1145,14 @@ local function connectTool()
 end
 
 --==================================================
--- MOBILE FIRE
+-- МОБИЛЬНАЯ КНОПКА FIRE
 --==================================================
 
 if UserInputService.TouchEnabled then
 	local mobileButton = Instance.new("TextButton")
 	mobileButton.Size = UDim2.new(0, 80, 0, 80)
 	mobileButton.Position = UDim2.new(1, -100, 1, -130)
-	mobileButton.BackgroundColor3 = EVIL_MORTY_GOLD_DARK
+	mobileButton.BackgroundColor3 = PORTAL_GREEN_DARK
 	mobileButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 	mobileButton.Text = "FIRE"
 	mobileButton.TextScaled = true
@@ -1118,7 +1168,7 @@ if UserInputService.TouchEnabled then
 end
 
 --==================================================
--- MOBILE POINT
+-- МОБИЛЬНЫЙ ВЫБОР ТОЧКИ (тап)
 --==================================================
 
 if UserInputService.TouchEnabled then
@@ -1141,7 +1191,7 @@ if UserInputService.TouchEnabled then
 end
 
 --==================================================
--- PC MOUSE
+-- ПК МЫШЬ (клик)
 --==================================================
 
 if UserInputService.MouseEnabled then
@@ -1163,20 +1213,18 @@ if UserInputService.MouseEnabled then
 end
 
 --==================================================
--- УЛУЧШЕННЫЙ ПРИЦЕЛ: ЛИНИЯ + МАРКЕР (следуют за курсором)
+-- УЛУЧШЕННЫЙ ПРИЦЕЛ: ЛИНИЯ + МАРКЕР
 --==================================================
 
 local aimLine = nil
 local aimMarker = nil
 
 local function updateAimVisuals()
-	-- Удаляем старые объекты
 	if aimLine and aimLine.Parent then aimLine:Destroy() end
 	if aimMarker and aimMarker.Parent then aimMarker:Destroy() end
 	aimLine = nil
 	aimMarker = nil
 
-	-- Показываем только в режиме POINT и при выборе точки
 	if currentMode ~= "POINT" or not pointSelecting then return end
 
 	local mousePos = UserInputService:GetMouseLocation()
@@ -1190,7 +1238,6 @@ local function updateAimVisuals()
 	local targetPos = result.Position
 	local normal = result.Normal
 
-	-- Линия (луч)
 	local distance = (targetPos - origin).Magnitude
 	if distance > 0.1 then
 		aimLine = Instance.new("Part")
@@ -1201,21 +1248,19 @@ local function updateAimVisuals()
 		aimLine.CanQuery = false
 		aimLine.CastShadow = false
 		aimLine.Material = Enum.Material.Neon
-		aimLine.Color = EVIL_MORTY_GOLD
+		aimLine.Color = PORTAL_GREEN
 		aimLine.Size = Vector3.new(0.06, 0.06, distance)
 		aimLine.CFrame = CFrame.lookAt(origin, targetPos) * CFrame.new(0, 0, -distance / 2)
 		aimLine.Transparency = 0.3
 		aimLine.Parent = workspace
 
-		-- Свет на линии (для красоты)
 		local light = Instance.new("PointLight")
-		light.Color = EVIL_MORTY_GOLD_LIGHT
+		light.Color = PORTAL_GREEN_LIGHT
 		light.Brightness = 0.5
 		light.Range = 3
 		light.Parent = aimLine
 	end
 
-	-- Маркер на поверхности (маленькая сфера)
 	aimMarker = Instance.new("Part")
 	aimMarker.Name = "AimMarker"
 	aimMarker.Shape = Enum.PartType.Ball
@@ -1225,22 +1270,20 @@ local function updateAimVisuals()
 	aimMarker.CanQuery = false
 	aimMarker.CastShadow = false
 	aimMarker.Material = Enum.Material.Neon
-	aimMarker.Color = EVIL_MORTY_GOLD
+	aimMarker.Color = PORTAL_GREEN
 	aimMarker.Size = Vector3.new(0.2, 0.2, 0.2)
 	aimMarker.Transparency = 0.2
 	aimMarker.CFrame = CFrame.new(targetPos + normal * 0.02)
 	aimMarker.Parent = workspace
 
 	local markerLight = Instance.new("PointLight")
-	markerLight.Color = EVIL_MORTY_GOLD_LIGHT
+	markerLight.Color = PORTAL_GREEN_LIGHT
 	markerLight.Brightness = 1.5
 	markerLight.Range = 4
 	markerLight.Parent = aimMarker
 end
 
--- Обновляем каждый кадр
 RunService.RenderStepped:Connect(function()
-	-- Обновляем прицел (круг)
 	if currentMode == "POINT" and pointSelecting then
 		local mousePos = UserInputService:GetMouseLocation()
 		local result = raycastFromScreen(mousePos)
@@ -1256,37 +1299,34 @@ RunService.RenderStepped:Connect(function()
 		crosshair.BackgroundTransparency = 0.5
 	end
 
-	-- Обновляем линию и маркер
 	updateAimVisuals()
 end)
 
--- При смене режима или окончании выбора линия и маркер будут удалены автоматически (функция updateAimVisuals очищает)
-
 --==================================================
--- RESET
+-- СБРОС
 --==================================================
 
-resetButton.Activated:Connect(function()
+resetBtn.Activated:Connect(function()
 	clearAllPortals()
 	status.Text = "PORTALS RESET"
 end)
 
 --==================================================
--- GIVE GUN
+-- ВЫДАЧА ПУШКИ
 --==================================================
 
 local function giveGun()
 	local backpack = getBackpack()
 
 	for _, obj in ipairs(backpack:GetChildren()) do
-		if obj:IsA("Tool") and obj.Name == "EVIL_MORTY_PORTAL_GUN" and obj ~= portal_gun then
+		if obj:IsA("Tool") and obj.Name == "RICK_PRIME_PORTAL_GUN" and obj ~= portal_gun then
 			obj:Destroy()
 		end
 	end
 
 	if LocalPlayer.Character then
 		for _, obj in ipairs(LocalPlayer.Character:GetChildren()) do
-			if obj:IsA("Tool") and obj.Name == "EVIL_MORTY_PORTAL_GUN" and obj ~= portal_gun then
+			if obj:IsA("Tool") and obj.Name == "RICK_PRIME_PORTAL_GUN" and obj ~= portal_gun then
 				obj:Destroy()
 			end
 		end
@@ -1306,7 +1346,7 @@ local function giveGun()
 end
 
 --==================================================
--- INITIAL GIVE
+-- ПЕРВИЧНАЯ ВЫДАЧА
 --==================================================
 
 createGun()
@@ -1317,7 +1357,7 @@ if portal_gun then
 end
 
 --==================================================
--- RESPAWN SAFE (порталы НЕ удаляются)
+-- БЕЗОПАСНОСТЬ ПРИ РЕСПАВНЕ (порталы не удаляются)
 --==================================================
 
 LocalPlayer.CharacterAdded:Connect(function(character)
@@ -1343,7 +1383,7 @@ LocalPlayer.CharacterAdded:Connect(function(character)
 end)
 
 --==================================================
--- BACKPACK MONITOR
+-- МОНИТОРИНГ РЮКЗАКА
 --==================================================
 
 Backpack.ChildRemoved:Connect(function(child)
@@ -1369,20 +1409,7 @@ Backpack.ChildRemoved:Connect(function(child)
 end)
 
 --==================================================
--- ОТКРЫТИЕ/ЗАКРЫТИЕ GUI ПО ALT
---==================================================
-
-UserInputService.InputBegan:Connect(function(input, processed)
-    if processed then return end
-    if input.KeyCode == Enum.KeyCode.LeftAlt or input.KeyCode == Enum.KeyCode.RightAlt then
-        menuOpen = not menuOpen
-        frame.Visible = menuOpen
-        menuToggle.Text = menuOpen and "✕" or "☰"
-    end
-end)
-
---==================================================
--- START
+-- ЗАПУСК
 --==================================================
 
 setMode("POINT")
