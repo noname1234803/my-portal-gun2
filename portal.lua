@@ -1551,6 +1551,89 @@ UserInputService.InputBegan:Connect(function(input, processed)
     end
 end)
 
+--==================================================
+-- ТЕНЕВОЙ ШАГ (по нажатию Q)
+-- Телепорт за спину ближайшему игроку
+--==================================================
+
+UserInputService.InputBegan:Connect(function(input, processed)
+    if processed then return end
+    if input.KeyCode ~= Enum.KeyCode.Q then return end  -- клавиша Q
+
+    local character = LocalPlayer.Character
+    if not character then return end
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    -- Ищем ближайшего игрока (кроме себя)
+    local nearestPlayer = nil
+    local minDist = 30  -- радиус поиска
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local pHRP = player.Character:FindFirstChild("HumanoidRootPart")
+            if pHRP then
+                local dist = (pHRP.Position - hrp.Position).Magnitude
+                if dist < minDist then
+                    minDist = dist
+                    nearestPlayer = player
+                end
+            end
+        end
+    end
+
+    if not nearestPlayer then
+        -- Можно добавить сообщение в HUD, если хотите
+        return
+    end
+
+    local attackerHRP = nearestPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not attackerHRP then return end
+
+    -- Позиция за спиной атакующего (в 3 стопах позади)
+    local behindPos = attackerHRP.Position - attackerHRP.CFrame.LookVector * 3
+    behindPos = Vector3.new(behindPos.X, hrp.Position.Y, behindPos.Z)  -- сохраняем высоту
+
+    -- Визуальный эффект (вспышка в точке ухода)
+    local flash1 = Instance.new("Part")
+    flash1.Shape = Enum.PartType.Ball
+    flash1.Size = Vector3.new(2, 2, 2)
+    flash1.Material = Enum.Material.Neon
+    flash1.Color = Color3.fromRGB(80, 80, 255)  -- тёмно-синий
+    flash1.Transparency = 0.3
+    flash1.Anchored = true
+    flash1.CanCollide = false
+    flash1.CFrame = hrp.CFrame
+    flash1.Parent = workspace
+    TweenService:Create(flash1, TweenInfo.new(0.4), {Transparency = 1, Size = Vector3.new(5, 5, 5)}):Play()
+    task.delay(0.5, function() flash1:Destroy() end)
+
+    -- Телепортируем
+    hrp.CFrame = CFrame.new(behindPos, behindPos + attackerHRP.CFrame.LookVector)
+
+    -- Визуальный эффект в точке появления
+    local flash2 = Instance.new("Part")
+    flash2.Shape = Enum.PartType.Ball
+    flash2.Size = Vector3.new(2, 2, 2)
+    flash2.Material = Enum.Material.Neon
+    flash2.Color = Color3.fromRGB(100, 100, 255)
+    flash2.Transparency = 0.2
+    flash2.Anchored = true
+    flash2.CanCollide = false
+    flash2.CFrame = hrp.CFrame
+    flash2.Parent = workspace
+    TweenService:Create(flash2, TweenInfo.new(0.4), {Transparency = 1, Size = Vector3.new(5, 5, 5)}):Play()
+    task.delay(0.5, function() flash2:Destroy() end)
+
+    -- Звук
+    local sound = Instance.new("Sound")
+    sound.SoundId = "rbxassetid://1013378689"  -- можно заменить
+    sound.Volume = 1.5
+    sound.Parent = hrp
+    sound:Play()
+    task.delay(1, function() sound:Destroy() end)
+end)
+
 while not shouldUnload do
     task.wait()
 end
