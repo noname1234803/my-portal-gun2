@@ -1,11 +1,13 @@
 --==================================================
--- EVIL MORTY PORTAL GUN (С HUD И БЫСТРЫМИ ЦВЕТАМИ)
+-- EVIL MORTY PORTAL GUN (ЖИВОЙ ПОРТАЛ + СЛЕДЫ + УСКОРЕНИЕ)
 -- FULL LOCAL SCRIPT
 --
 -- ПОРТАЛ С ИЗМЕНЯЕМЫМ ЦВЕТОМ (ползунок + кнопки)
 -- ОРИЕНТАЦИЯ ПО НОРМАЛИ ПОВЕРХНОСТИ
 -- ПРИВЯЗКА К ДВИЖУЩИМСЯ ОБЪЕКТАМ
--- ГИБКИЙ GUI СВЕРХУ + HUD СНИЗУ
+-- ЖИВАЯ ПУЛЬСАЦИЯ ПОРТАЛА
+-- СЛЕДЫ НА СТЕНАХ ПОСЛЕ ЗАКРЫТИЯ
+-- УСКОРЕНИЕ ПРИ ВЫХОДЕ ИЗ ПОРТАЛА
 --==================================================
 
 local Players = game:GetService("Players")
@@ -39,10 +41,10 @@ end
 
 local PORTAL_TEXTURE = "rbxassetid://77878374203347"
 
--- Динамические цвета портала (изменяются ползунком и кнопками)
-local portalColor = Color3.fromRGB(255, 195, 35)      -- основной
-local portalColorLight = Color3.fromRGB(255, 225, 90) -- светлый
-local portalColorDark = Color3.fromRGB(210, 145, 10)  -- тёмный
+-- Динамические цвета портала
+local portalColor = Color3.fromRGB(255, 195, 35)
+local portalColorLight = Color3.fromRGB(255, 225, 90)
+local portalColorDark = Color3.fromRGB(210, 145, 10)
 
 local PORTAL_GUN_SOUND = "rbxassetid://1013378689"
 local PORTAL_SPAWN_SOUND = "rbxassetid://756847338"
@@ -198,7 +200,50 @@ local function clearAllPortals()
 end
 
 --==================================================
--- CREATE GUN (оригинальная модель)
+-- СЛЕДЫ НА СТЕНАХ (функция создания следа)
+--==================================================
+
+local function createWallMark(position, normal, color)
+    local mark = Instance.new("Part")
+    mark.Name = "PortalWallMark"
+    mark.Size = Vector3.new(4, 4, 0.05)
+    mark.Material = Enum.Material.Neon
+    mark.Color = color
+    mark.Transparency = 0.4
+    mark.Anchored = true
+    mark.CanCollide = false
+    mark.CanTouch = false
+    mark.CanQuery = false
+    mark.CastShadow = false
+    mark.CFrame = CFrame.lookAt(position + normal * 0.03, position + normal) * CFrame.Angles(math.rad(90), 0, 0)
+    mark.Parent = workspace
+
+    -- Добавляем слабое свечение
+    local light = Instance.new("PointLight")
+    light.Color = color
+    light.Brightness = 0.3
+    light.Range = 3
+    light.Parent = mark
+
+    -- Анимация исчезновения (5 секунд)
+    local fadeStart = tick()
+    local fadeDuration = 5
+
+    RunService.Heartbeat:Connect(function(dt)
+        if not mark.Parent then return end
+        local elapsed = tick() - fadeStart
+        if elapsed >= fadeDuration then
+            mark:Destroy()
+            return
+        end
+        local progress = elapsed / fadeDuration
+        mark.Transparency = 0.4 + progress * 0.6
+        light.Brightness = 0.3 * (1 - progress)
+    end)
+end
+
+--==================================================
+-- CREATE GUN
 --==================================================
 
 local function createGun()
@@ -435,7 +480,7 @@ local function playPortalSpawnSound(portal)
 end
 
 --==================================================
--- CREATE PORTAL (динамический цвет)
+-- CREATE PORTAL (ЖИВОЙ ПОРТАЛ С ПУЛЬСАЦИЕЙ)
 --==================================================
 
 local function create_portal(position, lookDirection, surfaceNormal, hitPart)
@@ -557,6 +602,26 @@ local function create_portal(position, lookDirection, surfaceNormal, hitPart)
 
 	local rotation = 0
 	local rotationConnection
+
+	-- ЖИВАЯ ПУЛЬСАЦИЯ (размер + яркость)
+	local pulseTime = 0
+	local initialSize = FULL_SIZE
+	local initialBrightness = 1.8
+
+	task.spawn(function()
+		while portal and portal.Parent do
+			pulseTime += 0.03
+			local pulse = (math.sin(pulseTime * 2.5) + 1) / 2  -- 0..1
+			local scale = 0.92 + pulse * 0.08  -- 0.92..1.0
+			local newSize = Vector3.new(initialSize.X * scale, initialSize.Y * scale, initialSize.Z)
+			surface.Size = newSize
+			light.Brightness = initialBrightness * (0.8 + pulse * 0.2)
+			front.Transparency = 0.02 + pulse * 0.06
+			back.Transparency = 0.02 + pulse * 0.06
+			task.wait(0.03)
+		end
+	end)
+
 	rotationConnection = RunService.RenderStepped:Connect(function(dt)
 		if not portal or not portal.Parent then
 			if rotationConnection then rotationConnection:Disconnect() end
@@ -566,27 +631,15 @@ local function create_portal(position, lookDirection, surfaceNormal, hitPart)
 		surface.CFrame = portal.CFrame * CFrame.Angles(0, 0, rotation)
 	end)
 
-	task.spawn(function()
-		local pulseTime = 0
-		while portal and portal.Parent do
-			pulseTime += 0.08
-			local pulse = (math.sin(pulseTime * 2) + 1) / 2
-			front.Transparency = 0.02 + pulse * 0.06
-			back.Transparency = 0.02 + pulse * 0.06
-			light.Brightness = 1.5 + pulse * 0.5
-			task.wait(0.08)
-		end
-	end)
-
 	playPortalSpawnSound(portal)
 	return portal
 end
 
 --==================================================
--- TELEPORT EFFECT
+-- TELEPORT EFFECT + УСКОРЕНИЕ ПРИ ВЫХОДЕ
 --==================================================
 
-local function spawnTeleportEffect(position)
+local function spawnTeleportEffect(position, velocityImpulse)
     local flash = Instance.new("Part")
     flash.Name = "TeleportFlash"
     flash.Shape = Enum.PartType.Ball
@@ -627,6 +680,16 @@ local function spawnTeleportEffect(position)
     particles.Parent = att
     particles:Emit(40)
 
+    -- Добавляем частицы, летящие в направлении импульса (если есть)
+    if velocityImpulse and velocityImpulse.Magnitude > 1 then
+        local dirParticles = particles:Clone()
+        dirParticles.Speed = NumberRange.new(2, 5)
+        dirParticles.VelocityInheritance = 0
+        dirParticles.Rate = 0
+        dirParticles:Emit(15)
+        dirParticles.Parent = att
+    end
+
     TweenService:Create(flash, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
         Size = Vector3.new(8, 8, 8),
         Transparency = 1
@@ -638,7 +701,7 @@ local function spawnTeleportEffect(position)
 end
 
 --==================================================
--- TWO WAY TELEPORT (без автозакрытия)
+-- TWO WAY TELEPORT (С УСКОРЕНИЕМ И СЛЕДАМИ)
 --==================================================
 
 local function connectPortalTeleport(entrance, destination)
@@ -658,15 +721,33 @@ local function connectPortalTeleport(entrance, destination)
 		teleportDebounce = true
 		if portal_sound then portal_sound:Play() end
 
+		-- Создаём след на входе
+		if entrance.Parent then
+			local entrancePos = entrance.Position
+			local entranceNormal = entrance.CFrame.LookVector
+			createWallMark(entrancePos, entranceNormal, portalColor)
+		end
+
 		spawnTeleportEffect(hrp.Position)
 
 		local destinationCF = destination.CFrame
 		hrp.CFrame = destinationCF * CFrame.new(0, 0, -4)
-		hrp.AssemblyLinearVelocity = Vector3.zero
+
+		-- УСКОРЕНИЕ ПРИ ВЫХОДЕ (импульс в направлении портала)
+		local impulseDirection = destination.CFrame.LookVector
+		local impulseStrength = 30  -- сила толчка
+		hrp.AssemblyLinearVelocity = impulseDirection * impulseStrength
 		hrp.AssemblyAngularVelocity = Vector3.zero
 
 		task.wait(0.1)
-		spawnTeleportEffect(hrp.Position)
+		spawnTeleportEffect(hrp.Position, impulseDirection * impulseStrength)
+
+		-- Создаём след на выходе
+		if destination.Parent then
+			local destPos = destination.Position
+			local destNormal = destination.CFrame.LookVector
+			createWallMark(destPos, destNormal, portalColor)
+		end
 
 		task.delay(0.7, function()
 			teleportDebounce = false
@@ -730,13 +811,9 @@ gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 gui.Parent = PlayerGui
 
--- ==================================================
--- ПРИЦЕЛ (КРУГ) УДАЛЁН
--- ==================================================
-
--- Главное меню (горизонтальный фрейм) - сверху, увеличенной высоты
+-- Главное меню (горизонтальный фрейм)
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 750, 0, 155)  -- увеличенная высота для кнопок цветов
+frame.Size = UDim2.new(0, 750, 0, 155)
 frame.Position = UDim2.new(0.5, -375, 0, 20)
 frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 frame.BackgroundTransparency = 0.5
@@ -747,13 +824,10 @@ local frameCorner = Instance.new("UICorner")
 frameCorner.CornerRadius = UDim.new(0, 12)
 frameCorner.Parent = frame
 
--- ==================================================
--- HUD (ТЕКСТОВЫЙ СТАТУС) – РАЗМЕЩЁН НИЖЕ GUI
--- ==================================================
-
+-- HUD (текстовый статус)
 local hud = Instance.new("TextLabel")
 hud.Size = UDim2.new(0, 400, 0, 30)
-hud.Position = UDim2.new(0.5, -200, 0, 185)  -- под панелью (Y = 20 + 155 + 10 = 185)
+hud.Position = UDim2.new(0.5, -200, 0, 185)
 hud.BackgroundTransparency = 1
 hud.TextColor3 = portalColorLight
 hud.Text = "POINT: FIRE → A → B"
@@ -761,7 +835,7 @@ hud.TextScaled = true
 hud.Font = Enum.Font.Gotham
 hud.Parent = gui
 
--- Кнопка переключения меню (оставим в левом нижнем углу)
+-- Кнопка переключения меню
 local menuToggle = Instance.new("TextButton")
 menuToggle.Name = "MenuToggle"
 menuToggle.Size = UDim2.new(0, 50, 0, 50)
@@ -902,17 +976,16 @@ colorLabel.Parent = sliderBg
 --==================================================
 
 local dragging = false
-local sliderValue = 0.12  -- начальное значение (золотой)
+local sliderValue = 0.12
 
 local function updateColorFromSlider(value)
     sliderValue = math.clamp(value, 0, 1)
-    local hue = sliderValue * 0.85  -- диапазон от 0 до 0.85 (~красный до фиолетового)
+    local hue = sliderValue * 0.85
     local color = Color3.fromHSV(hue, 1, 1)
     portalColor = color
     portalColorLight = Color3.fromHSV(hue, 1, 0.9)
     portalColorDark = Color3.fromHSV(hue, 1, 0.4)
 
-    -- Обновляем индикатор, метку, HUD и элементы GUI
     sliderIndicator.BackgroundColor3 = portalColor
     colorLabel.Text = string.format("#%02X%02X%02X", portalColor.R*255, portalColor.G*255, portalColor.B*255)
     input.BorderColor3 = portalColor
@@ -920,7 +993,6 @@ local function updateColorFromSlider(value)
     hud.TextColor3 = portalColorLight
 end
 
--- Инициализация золотым цветом
 updateColorFromSlider(0.12)
 
 sliderIndicator.InputBegan:Connect(function(input)
@@ -958,14 +1030,14 @@ sliderBg.InputBegan:Connect(function(input)
 end)
 
 --==================================================
--- КНОПКИ БЫСТРОГО ВЫБОРА ЦВЕТА (зелёный, жёлтый, синий)
+-- КНОПКИ БЫСТРОГО ВЫБОРА ЦВЕТА
 --==================================================
 
 local function createColorButton(text, color, posX, posY)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(0, 60, 0, 28)
     btn.Position = UDim2.new(0, posX, 0, posY)
-    btn.BackgroundColor3 = color
+    btn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     btn.BorderSizePixel = 0
     btn.Text = ""
     btn.Parent = frame
@@ -974,7 +1046,6 @@ local function createColorButton(text, color, posX, posY)
     c.CornerRadius = UDim.new(0, 6)
     c.Parent = btn
 
-    -- Индикатор цвета (круг)
     local circle = Instance.new("Frame")
     circle.Size = UDim2.new(0, 20, 0, 20)
     circle.Position = UDim2.new(0.5, -10, 0.5, -10)
@@ -985,7 +1056,6 @@ local function createColorButton(text, color, posX, posY)
     circleCorner.CornerRadius = UDim.new(1, 0)
     circleCorner.Parent = circle
 
-    -- Эффект наведения
     btn.MouseEnter:Connect(function()
         btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     end)
@@ -994,7 +1064,6 @@ local function createColorButton(text, color, posX, posY)
     end)
 
     btn.Activated:Connect(function()
-        -- Устанавливаем цвет
         portalColor = color
         portalColorLight = Color3.new(
             math.min(1, color.R * 1.2),
@@ -1006,14 +1075,12 @@ local function createColorButton(text, color, posX, posY)
             color.G * 0.6,
             color.B * 0.6
         )
-        -- Обновляем GUI и ползунок
         sliderIndicator.BackgroundColor3 = portalColor
         colorLabel.Text = string.format("#%02X%02X%02X", portalColor.R*255, portalColor.G*255, portalColor.B*255)
         input.BorderColor3 = portalColor
         fireButton.BackgroundColor3 = portalColorDark
         hud.TextColor3 = portalColorLight
 
-        -- Вычисляем приблизительное значение для ползунка (приближённо)
         local h, s, v = Color3.toHSV(portalColor)
         local sliderPos = h / 0.85
         sliderValue = math.clamp(sliderPos, 0, 1)
@@ -1023,11 +1090,8 @@ local function createColorButton(text, color, posX, posY)
     return btn
 end
 
--- Зелёный (0.33 * 0.85 ≈ 0.28)
 local greenColor = Color3.fromRGB(0, 255, 65)
--- Жёлтый (0.14 * 0.85 ≈ 0.119, но у нас жёлтый близок к 0.12)
-local yellowColor = Color3.fromRGB(255, 195, 35)  -- уже используется как начальный
--- Синий (0.6 * 0.85 ≈ 0.51)
+local yellowColor = Color3.fromRGB(255, 195, 35)
 local blueColor = Color3.fromRGB(0, 120, 255)
 
 createColorButton("", greenColor, 10, 95)
@@ -1289,7 +1353,7 @@ if UserInputService.TouchEnabled then
 end
 
 --==================================================
--- MOBILE POINT (с передачей hitPart)
+-- MOBILE POINT
 --==================================================
 
 if UserInputService.TouchEnabled then
@@ -1317,7 +1381,7 @@ if UserInputService.TouchEnabled then
 end
 
 --==================================================
--- PC MOUSE (с передачей hitPart)
+-- PC MOUSE
 --==================================================
 
 if UserInputService.MouseEnabled then
@@ -1344,7 +1408,7 @@ if UserInputService.MouseEnabled then
 end
 
 --==================================================
--- УЛУЧШЕННЫЙ ПРИЦЕЛ: ЛИНИЯ + МАРКЕР (без круга)
+-- УЛУЧШЕННЫЙ ПРИЦЕЛ (ЛИНИЯ + МАРКЕР, БЕЗ КРУГА)
 --==================================================
 
 local aimLine = nil
@@ -1473,7 +1537,7 @@ if portal_gun then
 end
 
 --==================================================
--- RESPAWN SAFE (порталы НЕ удаляются)
+-- RESPAWN SAFE
 --==================================================
 
 LocalPlayer.CharacterAdded:Connect(function(character)
