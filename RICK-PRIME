@@ -1,7 +1,7 @@
 --==================================================
--- RICK PORTAL GUN (GREEN) — ИДЕАЛЬНАЯ ВЕРСИЯ
+-- RICK PORTAL GUN (GREEN) — С РЕГУЛИРОВКОЙ РАЗМЕРА (1–20) + ХИТБОКС + КНОПКА DEFAULT
 -- FULL LOCAL SCRIPT
--- МОДЕЛЬ RICK-PRIME (ПОЛНАЯ)
+-- МОДЕЛЬ RICK-PRIME
 --==================================================
 
 local Players = game:GetService("Players")
@@ -26,10 +26,16 @@ local RICK_GREEN_DARK = Color3.fromRGB(20, 150, 60)
 
 local PORTAL_GUN_SOUND = "rbxassetid://1013378689"
 local PORTAL_SPAWN_SOUND = "rbxassetid://756847338"
-local PORTAL_HUM_SOUND = "rbxassetid://9120408938"   -- гул портала (замените на свой)
-local PORTAL_CLOSE_SOUND = "rbxassetid://9120409044"  -- звук закрытия (замените на свой)
+local PORTAL_HUM_SOUND = "rbxassetid://9120408938"
+local PORTAL_CLOSE_SOUND = "rbxassetid://9120409044"
 
-local PORTAL_LIFETIME = 30 -- секунд до закрытия
+local PORTAL_LIFETIME = 30
+
+-- Размер портала (диаметр)
+local portalSize = 6.2
+local MIN_PORTAL_SIZE = 1
+local MAX_PORTAL_SIZE = 20
+local DEFAULT_PORTAL_SIZE = 6.2
 
 --==================================================
 -- PLAYER PORTAL HEIGHT
@@ -128,7 +134,6 @@ end
 local function animatePortalRemoval(portal)
     if not portal or not portal.Parent then return end
 
-    -- Останавливаем звук гула
     local humSound = portal:FindFirstChild("PortalHumSound")
     if humSound then humSound:Stop() end
 
@@ -164,7 +169,6 @@ local function animatePortalRemoval(portal)
         }):Play()
     end
 
-    -- Звук закрытия
     local closeSound = Instance.new("Sound")
     closeSound.SoundId = PORTAL_CLOSE_SOUND
     closeSound.Volume = 1.5
@@ -230,6 +234,27 @@ local function clearAllPortals(animated)
 end
 
 --==================================================
+-- ОБНОВЛЕНИЕ РАЗМЕРА ПОРТАЛА (ВКЛЮЧАЯ ХИТБОКС)
+--==================================================
+
+local function updatePortalSize(newSize)
+    newSize = math.clamp(newSize, MIN_PORTAL_SIZE, MAX_PORTAL_SIZE)
+    portalSize = newSize
+
+    local function updatePortal(portal)
+        if not portal then return end
+        portal.Size = Vector3.new(portalSize, portalSize, portal.Size.Z or 0.5)
+        local surface = portal:FindFirstChild("PortalTextureSurface")
+        if surface then
+            surface.Size = Vector3.new(portalSize, portalSize, surface.Size.Z)
+        end
+    end
+
+    updatePortal(portalA)
+    updatePortal(portalB)
+end
+
+--==================================================
 -- CREATE GUN (ПОЛНАЯ МОДЕЛЬ RICK-PRIME)
 --==================================================
 
@@ -269,8 +294,7 @@ local function createGun()
 	baseProps(Handle)
 	Handle.Parent = portal_gun
 
-	-- ===== ВСЕ ДЕТАЛИ (34 части) =====
-	-- Part1 (Part25)
+	-- ===== ВСЕ ДЕТАЛИ =====
 	local p1 = Instance.new("Part")
 	p1.Name = "Part25"
 	p1.Size = Vector3.new(0.12607526779174805, 0.12607526779174805, 0.12607526779174805)
@@ -281,7 +305,6 @@ local function createGun()
 	baseProps(p1)
 	p1.Parent = portal_gun
 
-	-- Part2 (Part26)
 	local p2 = Instance.new("Part")
 	p2.Name = "Part26"
 	p2.Size = Vector3.new(0.12607526779174805, 0.12607526779174805, 0.12607526779174805)
@@ -292,7 +315,6 @@ local function createGun()
 	baseProps(p2)
 	p2.Parent = portal_gun
 
-	-- Part3 (Part19)
 	local p3 = Instance.new("Part")
 	p3.Name = "Part19"
 	p3.Size = Vector3.new(0.8204419612884521, 0.02235540747642517, 0.5778412818908691)
@@ -303,7 +325,6 @@ local function createGun()
 	baseProps(p3)
 	p3.Parent = portal_gun
 
-	-- Part4 (Part20) – ствол
 	local p4 = Instance.new("Part")
 	p4.Name = "Part20"
 	p4.Size = Vector3.new(0.04735277593135834, 0.5016846656799316, 1.957836389541626)
@@ -314,7 +335,6 @@ local function createGun()
 	baseProps(p4)
 	p4.Parent = portal_gun
 
-	-- Part5 (Part21) – стеклянная колба
 	local p5 = Instance.new("Part")
 	p5.Name = "Part21"
 	p5.Size = Vector3.new(0.6296692490577698, 0.38313567638397217, 1.957836389541626)
@@ -326,7 +346,6 @@ local function createGun()
 	baseProps(p5)
 	p5.Parent = portal_gun
 
-	-- Part6 (Part23)
 	local p6 = Instance.new("Part")
 	p6.Name = "Part23"
 	p6.Size = Vector3.new(0.5791475772857666, 0.28940361738204956, 1.957836389541626)
@@ -337,7 +356,6 @@ local function createGun()
 	baseProps(p6)
 	p6.Parent = portal_gun
 
-	-- Part7 (Part24)
 	local p7 = Instance.new("Part")
 	p7.Name = "Part24"
 	p7.Size = Vector3.new(0.12607526779174805, 0.12607526779174805, 0.12607526779174805)
@@ -348,7 +366,6 @@ local function createGun()
 	baseProps(p7)
 	p7.Parent = portal_gun
 
-	-- Part8 (Part27)
 	local p8 = Instance.new("Part")
 	p8.Name = "Part27"
 	p8.Size = Vector3.new(0.12607526779174805, 0.12607526779174805, 0.12607526779174805)
@@ -359,7 +376,6 @@ local function createGun()
 	baseProps(p8)
 	p8.Parent = portal_gun
 
-	-- Part9 (Part28)
 	local p9 = Instance.new("Part")
 	p9.Name = "Part28"
 	p9.Size = Vector3.new(0.12607526779174805, 0.12607526779174805, 0.12607526779174805)
@@ -370,7 +386,6 @@ local function createGun()
 	baseProps(p9)
 	p9.Parent = portal_gun
 
-	-- Part10 (Part29)
 	local p10 = Instance.new("Part")
 	p10.Name = "Part29"
 	p10.Size = Vector3.new(0.12607526779174805, 0.12607526779174805, 0.12607526779174805)
@@ -381,7 +396,6 @@ local function createGun()
 	baseProps(p10)
 	p10.Parent = portal_gun
 
-	-- Part11 (Part30)
 	local p11 = Instance.new("Part")
 	p11.Name = "Part30"
 	p11.Size = Vector3.new(0.12607526779174805, 0.12607526779174805, 0.12607526779174805)
@@ -392,7 +406,6 @@ local function createGun()
 	baseProps(p11)
 	p11.Parent = portal_gun
 
-	-- Part12 (Part31)
 	local p12 = Instance.new("Part")
 	p12.Name = "Part31"
 	p12.Size = Vector3.new(0.12607526779174805, 0.12607526779174805, 0.12607526779174805)
@@ -403,7 +416,6 @@ local function createGun()
 	baseProps(p12)
 	p12.Parent = portal_gun
 
-	-- Part13 (Part32)
 	local p13 = Instance.new("Part")
 	p13.Name = "Part32"
 	p13.Size = Vector3.new(0.12607526779174805, 0.12607526779174805, 0.12607526779174805)
@@ -414,7 +426,6 @@ local function createGun()
 	baseProps(p13)
 	p13.Parent = portal_gun
 
-	-- Part14 (Part9)
 	local p14 = Instance.new("Part")
 	p14.Name = "Part9"
 	p14.Size = Vector3.new(0.3900238871574402, 1.0082629919052124, 0.17276853322982788)
@@ -425,7 +436,6 @@ local function createGun()
 	baseProps(p14)
 	p14.Parent = portal_gun
 
-	-- Part15 (Part10)
 	local p15 = Instance.new("Part")
 	p15.Name = "Part10"
 	p15.Size = Vector3.new(0.1727505922317505, 0.2819562554359436, 1.0100761651992798)
@@ -436,7 +446,6 @@ local function createGun()
 	baseProps(p15)
 	p15.Parent = portal_gun
 
-	-- Part16 (Part11)
 	local p16 = Instance.new("Part")
 	p16.Name = "Part11"
 	p16.Size = Vector3.new(0.1727505922317505, 0.2819562554359436, 1.0013866424560547)
@@ -447,7 +456,6 @@ local function createGun()
 	baseProps(p16)
 	p16.Parent = portal_gun
 
-	-- Part17 (Part12)
 	local p17 = Instance.new("Part")
 	p17.Name = "Part12"
 	p17.Size = Vector3.new(0.1727505922317505, 0.2819562554359436, 1.0100761651992798)
@@ -458,7 +466,6 @@ local function createGun()
 	baseProps(p17)
 	p17.Parent = portal_gun
 
-	-- Part18 (Part13)
 	local p18 = Instance.new("Part")
 	p18.Name = "Part13"
 	p18.Size = Vector3.new(0.3900238871574402, 1.0082629919052124, 0.17276853322982788)
@@ -469,7 +476,6 @@ local function createGun()
 	baseProps(p18)
 	p18.Parent = portal_gun
 
-	-- Part19 (Part14)
 	local p19 = Instance.new("Part")
 	p19.Name = "Part14"
 	p19.Size = Vector3.new(0.1727505922317505, 0.2819562554359436, 1.0013866424560547)
@@ -480,7 +486,6 @@ local function createGun()
 	baseProps(p19)
 	p19.Parent = portal_gun
 
-	-- Part20 (Part17)
 	local p20 = Instance.new("Part")
 	p20.Name = "Part17"
 	p20.Size = Vector3.new(0.1727505922317505, 0.2819562554359436, 1.0013866424560547)
@@ -491,9 +496,6 @@ local function createGun()
 	baseProps(p20)
 	p20.Parent = portal_gun
 
-	-- Part21 — это Handle, уже создан
-
-	-- Part22 (Part5)
 	local p22 = Instance.new("Part")
 	p22.Name = "Part5"
 	p22.Size = Vector3.new(0.3900238871574402, 1.6879383325576782, 0.17276853322982788)
@@ -504,7 +506,6 @@ local function createGun()
 	baseProps(p22)
 	p22.Parent = portal_gun
 
-	-- Part23 (Part15)
 	local p23 = Instance.new("Part")
 	p23.Name = "Part15"
 	p23.Size = Vector3.new(0.1727505922317505, 0.2819562554359436, 1.0100761651992798)
@@ -515,7 +516,6 @@ local function createGun()
 	baseProps(p23)
 	p23.Parent = portal_gun
 
-	-- Part24 (Part16)
 	local p24 = Instance.new("Part")
 	p24.Name = "Part16"
 	p24.Size = Vector3.new(0.3900238871574402, 1.0082629919052124, 0.17279618978500366)
@@ -526,7 +526,6 @@ local function createGun()
 	baseProps(p24)
 	p24.Parent = portal_gun
 
-	-- Part25 (Part3)
 	local p25 = Instance.new("Part")
 	p25.Name = "Part3"
 	p25.Size = Vector3.new(0.1727505922317505, 0.2819562554359436, 1.9372913837432861)
@@ -537,7 +536,6 @@ local function createGun()
 	baseProps(p25)
 	p25.Parent = portal_gun
 
-	-- Part26 (Part4)
 	local p26 = Instance.new("Part")
 	p26.Name = "Part4"
 	p26.Size = Vector3.new(0.1727505922317505, 0.2819562554359436, 1.9372913837432861)
@@ -548,7 +546,6 @@ local function createGun()
 	baseProps(p26)
 	p26.Parent = portal_gun
 
-	-- Part27 (Part18)
 	local p27 = Instance.new("Part")
 	p27.Name = "Part18"
 	p27.Size = Vector3.new(0.39002227783203125, 0.7776538729667664, 0.06472928822040558)
@@ -559,7 +556,6 @@ local function createGun()
 	baseProps(p27)
 	p27.Parent = portal_gun
 
-	-- Part28 (Part22)
 	local p28 = Instance.new("Part")
 	p28.Name = "Part22"
 	p28.Size = Vector3.new(0.19846020638942719, 0.30374982953071594, 0.06472928822040558)
@@ -570,7 +566,6 @@ local function createGun()
 	baseProps(p28)
 	p28.Parent = portal_gun
 
-	-- Part29 (Part33)
 	local p29 = Instance.new("Part")
 	p29.Name = "Part33"
 	p29.Size = Vector3.new(0.47682544589042664, 0.09656061232089996, 0.09775599837303162)
@@ -581,7 +576,6 @@ local function createGun()
 	baseProps(p29)
 	p29.Parent = portal_gun
 
-	-- Part30 (Part34)
 	local p30 = Instance.new("Part")
 	p30.Name = "Part34"
 	p30.Size = Vector3.new(0.3900068700313568, 0.09656061232089996, 0.09775599837303162)
@@ -592,7 +586,6 @@ local function createGun()
 	baseProps(p30)
 	p30.Parent = portal_gun
 
-	-- Part31 (Part2)
 	local p31 = Instance.new("Part")
 	p31.Name = "Part2"
 	p31.Size = Vector3.new(0.58489990234375, 0.3837226629257202, 0.2504405975341797)
@@ -603,7 +596,6 @@ local function createGun()
 	baseProps(p31)
 	p31.Parent = portal_gun
 
-	-- Part32 (Part6)
 	local p32 = Instance.new("Part")
 	p32.Name = "Part6"
 	p32.Size = Vector3.new(0.2507108747959137, 0.18860626220703125, 1.027486801147461)
@@ -614,7 +606,6 @@ local function createGun()
 	baseProps(p32)
 	p32.Parent = portal_gun
 
-	-- Part33 (Part7)
 	local p33 = Instance.new("Part")
 	p33.Name = "Part7"
 	p33.Size = Vector3.new(0.2507108747959137, 0.18860626220703125, 1.0274865627288818)
@@ -625,7 +616,6 @@ local function createGun()
 	baseProps(p33)
 	p33.Parent = portal_gun
 
-	-- Part34 (Part8)
 	local p34 = Instance.new("Part")
 	p34.Name = "Part8"
 	p34.Size = Vector3.new(0.2076818346977234, 1.0443774461746216, 0.2504405975341797)
@@ -657,7 +647,7 @@ local function createGun()
 	portal_sound.Parent = Handle
 
 	-- ===== MUZZLE PART =====
-	MuzzlePart = p4  -- ствол
+	MuzzlePart = p4
 
 	-- ===== АНИМАЦИЯ ЯДРА =====
 	local coreParts = {p1, p2, p7, p8, p9, p10, p11, p12, p13}
@@ -793,13 +783,13 @@ local function playPortalSpawnSound(portal)
 end
 
 --==================================================
--- CREATE PORTAL (С УЛУЧШЕНИЯМИ: ГУЛ, ТАЙМЕР, УСКОРЕННАЯ ПУЛЬСАЦИЯ)
+-- CREATE PORTAL (С ИЗМЕНЯЕМЫМ ХИТБОКСОМ)
 --==================================================
 
 local function create_portal(position, lookDirection, surfaceNormal)
 	local portal = Instance.new("Part")
 	portal.Name = "RickGreenPortal"
-	portal.Size = Vector3.new(0.5, 0.5, 0.5)
+	portal.Size = Vector3.new(portalSize, portalSize, 0.5)
 	portal.Transparency = 1
 	portal.Anchored = true
 	portal.CanCollide = false
@@ -835,7 +825,7 @@ local function create_portal(position, lookDirection, surfaceNormal)
 	surface.CastShadow = false
 	surface.CFrame = portal.CFrame
 
-	local FULL_SIZE = Vector3.new(9.3, 9.3, 0.08)
+	local FULL_SIZE = Vector3.new(portalSize, portalSize, 0.08)
 	local INITIAL_SIZE = Vector3.new(0.15, 0.15, 0.08)
 	
 	surface.Size = INITIAL_SIZE
@@ -865,7 +855,6 @@ local function create_portal(position, lookDirection, surfaceNormal)
 	light.Shadows = false
 	light.Parent = surface
 
-	-- ===== ФОНОВЫЙ ЗВУК ПОРТАЛА (ГУЛ) =====
 	local humSound = Instance.new("Sound")
 	humSound.Name = "PortalHumSound"
 	humSound.SoundId = PORTAL_HUM_SOUND
@@ -901,7 +890,6 @@ local function create_portal(position, lookDirection, surfaceNormal)
 	})
 	particles.Parent = attachment
 
-	-- РАСШИРЕНИЕ
 	local expandTween = TweenService:Create(surface, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
 		Size = FULL_SIZE
 	})
@@ -913,7 +901,6 @@ local function create_portal(position, lookDirection, surfaceNormal)
 	particles:Emit(50)
 	particles.Rate = 10
 
-	-- ВРАЩЕНИЕ
 	local rotation = 0
 	local rotationConnection
 	rotationConnection = RunService.RenderStepped:Connect(function(dt)
@@ -925,7 +912,6 @@ local function create_portal(position, lookDirection, surfaceNormal)
 		surface.CFrame = portal.CFrame * CFrame.Angles(0, 0, rotation)
 	end)
 
-	-- ===== УСКОРЕННАЯ ПУЛЬСАЦИЯ (зависит от времени) =====
 	local startTime = tick()
 	local lifetime = PORTAL_LIFETIME
 
@@ -935,11 +921,11 @@ local function create_portal(position, lookDirection, surfaceNormal)
 			pulseTime += 0.05
 			local elapsed = tick() - startTime
 			local remaining = math.max(0, lifetime - elapsed)
-			local pulseSpeed = 3.0 + (1 - remaining / lifetime) * 2.0  -- ускоряется к концу
+			local pulseSpeed = 3.0 + (1 - remaining / lifetime) * 2.0
 			local pulse = (math.sin(pulseTime * pulseSpeed) + 1) / 2
 			
 			local scale = 0.92 + pulse * 0.16
-			local newSize = Vector3.new(FULL_SIZE.X * scale, FULL_SIZE.Y * scale, FULL_SIZE.Z)
+			local newSize = Vector3.new(portalSize * scale, portalSize * scale, 0.08)
 			surface.Size = newSize
 			
 			light.Brightness = 1.2 + pulse * 1.2
@@ -953,7 +939,6 @@ local function create_portal(position, lookDirection, surfaceNormal)
 
 	playPortalSpawnSound(portal)
 
-	-- ===== ТАЙМЕР НА ЭКРАНЕ =====
 	local portalLabel = portalA == nil and "A" or "B"
 	local timerLabel = Instance.new("TextLabel")
 	timerLabel.Name = "PortalTimer"
@@ -964,7 +949,7 @@ local function create_portal(position, lookDirection, surfaceNormal)
 	timerLabel.TextScaled = true
 	timerLabel.Font = Enum.Font.GothamBold
 	timerLabel.Text = string.format("Portal %s: %.0fs", portalLabel, PORTAL_LIFETIME)
-	timerLabel.Parent = gui  -- gui уже создан ниже
+	timerLabel.Parent = gui
 
 	local timerConnection
 	timerConnection = RunService.Heartbeat:Connect(function()
@@ -984,7 +969,6 @@ local function create_portal(position, lookDirection, surfaceNormal)
 		end
 	end)
 
-	-- ===== АВТОМАТИЧЕСКОЕ ЗАКРЫТИЕ =====
 	task.delay(PORTAL_LIFETIME, function()
 		if portal and portal.Parent then
 			if timerLabel then timerLabel:Destroy() end
@@ -999,7 +983,7 @@ local function create_portal(position, lookDirection, surfaceNormal)
 end
 
 --==================================================
--- TWO WAY TELEPORT (С МАСКИРОВКОЙ)
+-- TWO WAY TELEPORT
 --==================================================
 
 local function connectPortalTeleport(entrance, destination)
@@ -1115,7 +1099,7 @@ local function raycastFromScreen(screenPosition)
 end
 
 --==================================================
--- GUI
+-- GUI (С ПОЛЗУНКОМ 1–20 И КНОПКОЙ DEFAULT)
 --==================================================
 
 local gui = Instance.new("ScreenGui")
@@ -1125,7 +1109,7 @@ gui.IgnoreGuiInset = true
 gui.Parent = PlayerGui
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 850, 0, 80)
+frame.Size = UDim2.new(0, 850, 0, 110)
 frame.Position = UDim2.new(0.5, -425, 0, 15)
 frame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 frame.BackgroundTransparency = 0.15
@@ -1409,7 +1393,109 @@ local resetCorner = Instance.new("UICorner")
 resetCorner.CornerRadius = UDim.new(0, 6)
 resetCorner.Parent = resetButton
 
---==================================================
+-- ===== ПОЛЗУНОК РАЗМЕРА (1–20) =====
+local sizeLabel = Instance.new("TextLabel")
+sizeLabel.Size = UDim2.new(0, 80, 0, 20)
+sizeLabel.Position = UDim2.new(0, 10, 0, 78)
+sizeLabel.BackgroundTransparency = 1
+sizeLabel.TextColor3 = Color3.fromRGB(255,255,255)
+sizeLabel.Text = "Размер: " .. string.format("%.1f", portalSize)
+sizeLabel.TextScaled = true
+sizeLabel.Font = Enum.Font.GothamBold
+sizeLabel.Parent = frame
+
+local sliderBg = Instance.new("Frame")
+sliderBg.Size = UDim2.new(0, 200, 0, 8)
+sliderBg.Position = UDim2.new(0, 100, 0, 84)
+sliderBg.BackgroundColor3 = Color3.fromRGB(100,100,100)
+sliderBg.BorderSizePixel = 0
+sliderBg.Parent = frame
+local sliderBgCorner = Instance.new("UICorner")
+sliderBgCorner.CornerRadius = UDim.new(1,0)
+sliderBgCorner.Parent = sliderBg
+
+local sliderFill = Instance.new("Frame")
+sliderFill.Size = UDim2.new((portalSize - MIN_PORTAL_SIZE) / (MAX_PORTAL_SIZE - MIN_PORTAL_SIZE), 0, 1, 0)
+sliderFill.BackgroundColor3 = RICK_GREEN
+sliderFill.BorderSizePixel = 0
+sliderFill.Parent = sliderBg
+local sliderFillCorner = Instance.new("UICorner")
+sliderFillCorner.CornerRadius = UDim.new(1,0)
+sliderFillCorner.Parent = sliderFill
+
+local sliderButton = Instance.new("TextButton")
+sliderButton.Size = UDim2.new(0, 16, 0, 16)
+sliderButton.Position = UDim2.new((portalSize - MIN_PORTAL_SIZE) / (MAX_PORTAL_SIZE - MIN_PORTAL_SIZE), -8, 0.5, -8)
+sliderButton.BackgroundColor3 = RICK_GREEN_LIGHT
+sliderButton.BorderSizePixel = 0
+sliderButton.Text = ""
+sliderButton.Parent = sliderBg
+local sliderButtonCorner = Instance.new("UICorner")
+sliderButtonCorner.CornerRadius = UDim.new(1,0)
+sliderButtonCorner.Parent = sliderButton
+
+local draggingSlider = false
+sliderButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingSlider = true
+    end
+end)
+
+sliderButton.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        draggingSlider = false
+    end
+end)
+
+-- Функция установки размера (общая для слайдера и кнопки)
+local function setSize(newSize)
+    newSize = math.clamp(newSize, MIN_PORTAL_SIZE, MAX_PORTAL_SIZE)
+    updatePortalSize(newSize)
+    local relative = (newSize - MIN_PORTAL_SIZE) / (MAX_PORTAL_SIZE - MIN_PORTAL_SIZE)
+    sliderFill.Size = UDim2.new(relative, 0, 1, 0)
+    sliderButton.Position = UDim2.new(relative, -8, 0.5, -8)
+    sizeLabel.Text = "Размер: " .. string.format("%.1f", portalSize)
+end
+
+local function updateSliderPosition(mouseX)
+    local absX = mouseX - sliderBg.AbsolutePosition.X
+    local relative = math.clamp(absX / sliderBg.AbsoluteSize.X, 0, 1)
+    local newSize = MIN_PORTAL_SIZE + relative * (MAX_PORTAL_SIZE - MIN_PORTAL_SIZE)
+    setSize(newSize)
+end
+
+sliderButton.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement and draggingSlider then
+        updateSliderPosition(input.Position.X)
+    end
+end)
+
+sliderBg.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        updateSliderPosition(input.Position.X)
+    end
+end)
+
+-- ===== КНОПКА DEFAULT (установить размер 6.2) =====
+local defaultButton = Instance.new("TextButton")
+defaultButton.Size = UDim2.new(0, 60, 0, 22)
+defaultButton.Position = UDim2.new(0, 310, 0, 82)
+defaultButton.BackgroundColor3 = RICK_GREEN_DARK
+defaultButton.BorderSizePixel = 0
+defaultButton.TextColor3 = Color3.fromRGB(255,255,255)
+defaultButton.Text = "Default"
+defaultButton.TextScaled = true
+defaultButton.Font = Enum.Font.GothamBold
+defaultButton.Parent = frame
+local defaultCorner = Instance.new("UICorner")
+defaultCorner.CornerRadius = UDim.new(0, 4)
+defaultCorner.Parent = defaultButton
+
+defaultButton.Activated:Connect(function()
+    setSize(DEFAULT_PORTAL_SIZE)
+end)
+
+-- ==================================================
 -- POINT SELECTION
 --==================================================
 
