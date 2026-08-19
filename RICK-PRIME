@@ -2,6 +2,7 @@
 -- RICK PORTAL GUN (GREEN) — С РЕГУЛИРОВКОЙ РАЗМЕРА (1–20) + ХИТБОКС + КНОПКА DEFAULT
 -- FULL LOCAL SCRIPT
 -- МОДЕЛЬ RICK-PRIME
+-- ДОБАВЛЕНА ПРИВЯЗКА К ДВИЖУЩИМСЯ ОБЪЕКТАМ (Weld)
 --==================================================
 
 local Players = game:GetService("Players")
@@ -781,15 +782,15 @@ local function playPortalSpawnSound(portal)
 end
 
 --==================================================
--- CREATE PORTAL (С ИЗМЕНЯЕМЫМ ХИТБОКСОМ) — БЕЗ ТАЙМЕРА
+-- CREATE PORTAL (С ИЗМЕНЯЕМЫМ ХИТБОКСОМ + ПРИВЯЗКА)
 --==================================================
 
-local function create_portal(position, lookDirection, surfaceNormal)
+local function create_portal(position, lookDirection, surfaceNormal, hitPart)
 	local portal = Instance.new("Part")
 	portal.Name = "RickGreenPortal"
 	portal.Size = Vector3.new(portalSize, portalSize, 0.5)
 	portal.Transparency = 1
-	portal.Anchored = true
+	portal.Anchored = (hitPart == nil)  -- если есть привязка, то не anchored
 	portal.CanCollide = false
 	portal.CanTouch = true
 	portal.CanQuery = false
@@ -812,6 +813,17 @@ local function create_portal(position, lookDirection, surfaceNormal)
 	end
 
 	portal.Parent = workspace
+
+	-- Привязка к движущемуся объекту
+	if hitPart then
+		local weld = Instance.new("Weld")
+		weld.Name = "PortalAttachmentWeld"
+		weld.Part0 = hitPart
+		weld.Part1 = portal
+		local relativeCF = hitPart.CFrame:Inverse() * portal.CFrame
+		weld.C0 = relativeCF
+		weld.Parent = portal
+	end
 
 	local surface = Instance.new("Part")
 	surface.Name = "PortalTextureSurface"
@@ -1018,8 +1030,8 @@ end
 local function createPortalPair(pointDataA, pointDataB)
 	clearAllPortals(false)
 
-	portalA = create_portal(pointDataA.Position, nil, pointDataA.Normal)
-	portalB = create_portal(pointDataB.Position, nil, pointDataB.Normal)
+	portalA = create_portal(pointDataA.Position, nil, pointDataA.Normal, pointDataA.HitPart)
+	portalB = create_portal(pointDataB.Position, nil, pointDataB.Normal, pointDataB.HitPart)
 
 	connectPortalTeleport(portalA, portalB)
 	connectPortalTeleport(portalB, portalA)
@@ -1465,7 +1477,7 @@ local function startPointSelection()
 	status.Text = "TAP → SET POINT A"
 end
 
-local function setPoint(position, normal)
+local function setPoint(position, normal, hitPart)
 	if currentMode ~= "POINT" then return end
 	if not pointSelecting then return end
 	
@@ -1476,7 +1488,7 @@ local function setPoint(position, normal)
 	end
 
 	if pointStage == 1 then
-		pointA = { Position = position, Normal = normal }
+		pointA = { Position = position, Normal = normal, HitPart = hitPart }
 		pointStage = 2
 
 		local muzzlePos = muzzleFlash()
@@ -1488,7 +1500,7 @@ local function setPoint(position, normal)
 	end
 
 	if pointStage == 2 then
-		pointB = { Position = position, Normal = normal }
+		pointB = { Position = position, Normal = normal, HitPart = hitPart }
 
 		local muzzlePos = muzzleFlash()
 		if muzzlePos then createBeam(muzzlePos, position) end
@@ -1556,8 +1568,8 @@ local function firePlayerPortal(playerName)
 	local frontPosition = hrp.Position + hrp.CFrame.LookVector * 5 + Vector3.new(0, PLAYER_PORTAL_HEIGHT - 2.8, 0)
 	local targetPosition = targetHRP.Position + Vector3.new(0, PLAYER_PORTAL_HEIGHT - 2.8, 0)
 
-	local entrance = create_portal(frontPosition, hrp.CFrame.LookVector)
-	local destination = create_portal(targetPosition, -targetHRP.CFrame.LookVector)
+	local entrance = create_portal(frontPosition, hrp.CFrame.LookVector, nil, nil)  -- без привязки
+	local destination = create_portal(targetPosition, -targetHRP.CFrame.LookVector, nil, nil)
 
 	portalA = entrance
 	portalB = destination
@@ -1594,7 +1606,7 @@ local function firePlacePortal(placeId)
 	clearAllPortals(false)
 
 	local position = hrp.Position + hrp.CFrame.LookVector * 5
-	local portal = create_portal(position, hrp.CFrame.LookVector)
+	local portal = create_portal(position, hrp.CFrame.LookVector, nil, nil)
 	portalA = portal
 
 	portal.Touched:Connect(function(hit)
@@ -1741,7 +1753,7 @@ UserInputService.InputBegan:Connect(function(inputObject, processed)
 		return
 	end
 
-	setPoint(result.Position, result.Normal)
+	setPoint(result.Position, result.Normal, result.Instance)  -- передаём hitPart
 end)
 
 --==================================================
