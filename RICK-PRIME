@@ -29,8 +29,6 @@ local PORTAL_SPAWN_SOUND = "rbxassetid://756847338"
 local PORTAL_HUM_SOUND = "rbxassetid://9120408938"
 local PORTAL_CLOSE_SOUND = "rbxassetid://9120409044"
 
-local PORTAL_LIFETIME = 30
-
 -- Размер портала (диаметр)
 local portalSize = 6.2
 local MIN_PORTAL_SIZE = 1
@@ -783,7 +781,7 @@ local function playPortalSpawnSound(portal)
 end
 
 --==================================================
--- CREATE PORTAL (С ИЗМЕНЯЕМЫМ ХИТБОКСОМ)
+-- CREATE PORTAL (С ИЗМЕНЯЕМЫМ ХИТБОКСОМ) — БЕЗ ТАЙМЕРА
 --==================================================
 
 local function create_portal(position, lookDirection, surfaceNormal)
@@ -912,72 +910,25 @@ local function create_portal(position, lookDirection, surfaceNormal)
 		surface.CFrame = portal.CFrame * CFrame.Angles(0, 0, rotation)
 	end)
 
-	local startTime = tick()
-	local lifetime = PORTAL_LIFETIME
-
+	-- Бесконечная пульсация (без таймера)
 	task.spawn(function()
 		local pulseTime = 0
 		while portal and portal.Parent do
 			pulseTime += 0.05
-			local elapsed = tick() - startTime
-			local remaining = math.max(0, lifetime - elapsed)
-			local pulseSpeed = 3.0 + (1 - remaining / lifetime) * 2.0
-			local pulse = (math.sin(pulseTime * pulseSpeed) + 1) / 2
-			
+			local pulse = (math.sin(pulseTime * 3.5) + 1) / 2
 			local scale = 0.92 + pulse * 0.16
 			local newSize = Vector3.new(portalSize * scale, portalSize * scale, 0.08)
 			surface.Size = newSize
-			
 			light.Brightness = 1.2 + pulse * 1.2
-			
 			front.Transparency = 0.02 + pulse * 0.12
 			back.Transparency = 0.02 + pulse * 0.12
-			
 			task.wait(0.05)
 		end
 	end)
 
 	playPortalSpawnSound(portal)
 
-	local portalLabel = portalA == nil and "A" or "B"
-	local timerLabel = Instance.new("TextLabel")
-	timerLabel.Name = "PortalTimer"
-	timerLabel.Size = UDim2.new(0, 100, 0, 30)
-	timerLabel.Position = UDim2.new(0.5, -50, 0.5, 60)
-	timerLabel.BackgroundTransparency = 1
-	timerLabel.TextColor3 = RICK_GREEN_LIGHT
-	timerLabel.TextScaled = true
-	timerLabel.Font = Enum.Font.GothamBold
-	timerLabel.Text = string.format("Portal %s: %.0fs", portalLabel, PORTAL_LIFETIME)
-	timerLabel.Parent = gui
-
-	local timerConnection
-	timerConnection = RunService.Heartbeat:Connect(function()
-		if not portal or not portal.Parent then
-			if timerConnection then timerConnection:Disconnect() end
-			if timerLabel then timerLabel:Destroy() end
-			return
-		end
-		local elapsed = tick() - startTime
-		local remaining = math.max(0, lifetime - elapsed)
-		if remaining <= 0 then
-			timerLabel.Text = "Portal " .. portalLabel .. ": CLOSED"
-			if timerConnection then timerConnection:Disconnect() end
-			task.delay(1, function() if timerLabel then timerLabel:Destroy() end end)
-		else
-			timerLabel.Text = string.format("Portal %s: %.0fs", portalLabel, remaining)
-		end
-	end)
-
-	task.delay(PORTAL_LIFETIME, function()
-		if portal and portal.Parent then
-			if timerLabel then timerLabel:Destroy() end
-			if timerConnection then timerConnection:Disconnect() end
-			animatePortalRemoval(portal)
-			if portal == portalA then portalA = nil end
-			if portal == portalB then portalB = nil end
-		end
-	end)
+	-- Таймер убран, счётчик не создаётся
 
 	return portal
 end
