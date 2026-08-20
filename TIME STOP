@@ -1,0 +1,662 @@
+--// GOLDEN TIME STOP + DESYNC + FLY (ПОЛНАЯ МОДЕЛЬ)
+--// LocalScript в StarterPlayerScripts
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local TOOL_NAME = "Golden Time Stop"
+
+local timeStopped = false
+local tool = nil
+
+-- Таблицы для заморозки мира
+local frozenParts = {}
+local frozenMotors = {}
+local frozenParticles = {}
+local frozenTrails = {}
+local frozenBeams = {}
+local frozenSounds = {}
+
+-- Для noclip
+local noclipData = {}
+
+-- Для десинка и полёта
+local savedRootCFrame = nil
+local isDesyncing = false
+local moveUpdateConnection = nil
+local flySpeed = 50
+local isFlying = false
+
+--==================================================
+-- НАСТРОЙКИ
+--==================================================
+
+local FREEZE_UPDATE = 0.5  -- обновление заморозки мира
+
+local lastFreezeUpdate = 0
+
+--==================================================
+-- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+--==================================================
+
+local function getCharacter()
+    return player.Character
+end
+
+local function getRoot()
+    local char = getCharacter()
+    if not char then return nil end
+    return char:FindFirstChild("HumanoidRootPart")
+end
+
+local function getHumanoid()
+    local char = getCharacter()
+    if not char then return nil end
+    return char:FindFirstChildOfClass("Humanoid")
+end
+
+local function isMyCharacter(obj)
+    local char = getCharacter()
+    if not char then return false end
+    return obj:IsDescendantOf(char)
+end
+
+--==================================================
+-- СОЗДАНИЕ ИНСТРУМЕНТА (ПОЛНАЯ МОДЕЛЬ)
+--==================================================
+
+local function createTool(parent)
+
+    local t = Instance.new("Tool")
+    t.Name = TOOL_NAME
+    t.RequiresHandle = true
+    t.CanBeDropped = false
+    t.ToolTip = "Остановить время"
+
+    local handle = Instance.new("Part")
+    handle.Name = "Handle"
+    handle.CFrame = CFrame.new(-10.2571602, 0.13096714, 35.0922241, 1, 0, 0, 0, 1, 0, 0, 0, 1)
+    handle.Position = Vector3.new(-10.257160186767578, 0.1309671401977539, 35.09222412109375)
+    handle.Color = Color3.new(0, 0.560784, 0.611765)
+    handle.Size = Vector3.new(0.2343241423368454, 0.26196980476379395, 0.05554807186126709)
+    handle.BottomSurface = Enum.SurfaceType.Smooth
+    handle.BrickColor = BrickColor.new("Bright bluish green")
+    handle.Material = Enum.Material.SmoothPlastic
+    handle.TopSurface = Enum.SurfaceType.Smooth
+    handle.brickColor = BrickColor.new("Bright bluish green")
+    handle.CanCollide = false
+    handle.CanTouch = false
+    handle.CanQuery = false
+    handle.Massless = true
+    handle.Parent = t
+
+    local part1 = Instance.new("Part")
+    part1.Name = "Part1"
+    part1.CFrame = CFrame.new(-11.0629539, 0.624097228, 35.0922241, 1, 0, 0, 0, 1, 0, 0, 0, 1)
+    part1.Position = Vector3.new(-11.06295394897461, 0.6240972280502319, 35.09222412109375)
+    part1.Color = Color3.new(0, 0.560784, 0.611765)
+    part1.Size = Vector3.new(1.8459117412567139, 1.2481863498687744, 0.05554807186126709)
+    part1.BottomSurface = Enum.SurfaceType.Smooth
+    part1.BrickColor = BrickColor.new("Bright bluish green")
+    part1.Material = Enum.Material.SmoothPlastic
+    part1.TopSurface = Enum.SurfaceType.Smooth
+    part1.brickColor = BrickColor.new("Bright bluish green")
+    part1.CanCollide = false
+    part1.CanTouch = false
+    part1.CanQuery = false
+    part1.Massless = true
+    part1.Parent = t
+
+    local part2 = Instance.new("Part")
+    part2.Name = "Part2"
+    part2.CFrame = CFrame.new(-11.0527649, 0.622364104, 35.1199951, 1, 0, 0, 0, 1, 0, 0, 0, 1)
+    part2.Position = Vector3.new(-11.052764892578125, 0.6223641037940979, 35.1199951171875)
+    part2.Color = Color3.new(0.105882, 0.164706, 0.207843)
+    part2.Size = Vector3.new(1.6633565425872803, 1.0290207862854004, 0.05554807186126709)
+    part2.BottomSurface = Enum.SurfaceType.Smooth
+    part2.BrickColor = BrickColor.new("Black")
+    part2.Material = Enum.Material.SmoothPlastic
+    part2.TopSurface = Enum.SurfaceType.Smooth
+    part2.brickColor = BrickColor.new("Black")
+    part2.CanCollide = false
+    part2.CanTouch = false
+    part2.CanQuery = false
+    part2.Massless = true
+    part2.Parent = t
+
+    local part3 = Instance.new("Part")
+    part3.Name = "Part3"
+    part3.CFrame = CFrame.new(-10.1931028, 1.48578739, 35.0832481, 0, 0, 1, 1, 0, 0, 0, 1, 0)
+    part3.Orientation = Vector3.new(0, 90, 90)
+    part3.Position = Vector3.new(-10.193102836608887, 1.4857873916625977, 35.083248138427734)
+    part3.Rotation = Vector3.new(90, 90, 0)
+    part3.Size = Vector3.new(0.4751938581466675, 0.0376206636428833, 2)
+    part3.BottomSurface = Enum.SurfaceType.Smooth
+    part3.TopSurface = Enum.SurfaceType.Smooth
+    part3.Shape = Enum.PartType.Cylinder
+    part3.CanCollide = false
+    part3.CanTouch = false
+    part3.CanQuery = false
+    part3.Massless = true
+    part3.Parent = t
+
+    local part4 = Instance.new("Part")
+    part4.Name = "Part4"
+    part4.CFrame = CFrame.new(-10.1931028, 1.75092793, 35.0825729, 0, 0, 1, 1, 0, 0, 0, 1, 0)
+    part4.Orientation = Vector3.new(0, 90, 90)
+    part4.Position = Vector3.new(-10.193102836608887, 1.7509279251098633, 35.08257293701172)
+    part4.Rotation = Vector3.new(90, 90, 0)
+    part4.Color = Color3.new(0, 1, 0)
+    part4.Size = Vector3.new(0.05508705973625183, 0.0376206636428833, 2)
+    part4.BottomSurface = Enum.SurfaceType.Smooth
+    part4.BrickColor = BrickColor.new("Lime green")
+    part4.Material = Enum.Material.Neon
+    part4.TopSurface = Enum.SurfaceType.Smooth
+    part4.brickColor = BrickColor.new("Lime green")
+    part4.Shape = Enum.PartType.Cylinder
+    part4.CanCollide = false
+    part4.CanTouch = false
+    part4.CanQuery = false
+    part4.Massless = true
+    part4.Parent = t
+
+    local function weld(part0, part1)
+        local w = Instance.new("WeldConstraint")
+        w.Part0 = part0
+        w.Part1 = part1
+        w.Parent = part0
+    end
+    weld(handle, part1)
+    weld(handle, part2)
+    weld(handle, part3)
+    weld(handle, part4)
+
+    t.Parent = parent
+    return t
+end
+
+--==================================================
+-- GUI
+--==================================================
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "GoldenTimeStopGUI"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+gui.Parent = player:WaitForChild("PlayerGui")
+
+local status = Instance.new("TextLabel")
+status.Size = UDim2.new(0, 340, 0, 52)
+status.Position = UDim2.new(0.5, -170, 0, 30)
+status.BackgroundColor3 = Color3.fromRGB(15, 12, 5)
+status.BackgroundTransparency = 0.15
+status.TextColor3 = Color3.fromRGB(255, 210, 45)
+status.TextStrokeTransparency = 0.25
+status.Font = Enum.Font.GothamBold
+status.TextSize = 21
+status.Text = "⏸  ВРЕМЯ ОСТАНОВЛЕНО"
+status.Visible = false
+status.Parent = gui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 12)
+corner.Parent = status
+
+local stroke = Instance.new("UIStroke")
+stroke.Color = Color3.fromRGB(255, 190, 25)
+stroke.Thickness = 2
+stroke.Parent = status
+
+--==================================================
+-- ЦВЕТОВОЙ ЭФФЕКТ
+--==================================================
+
+local colorEffect = Instance.new("ColorCorrectionEffect")
+colorEffect.Name = "GoldenTimeStopColor"
+colorEffect.Brightness = 0.02
+colorEffect.Contrast = 0.22
+colorEffect.Saturation = -0.08
+colorEffect.TintColor = Color3.fromRGB(255, 235, 180)
+colorEffect.Enabled = false
+colorEffect.Parent = Lighting
+
+--==================================================
+-- ЗАМОРОЗКА МИРА
+--==================================================
+
+local function freezeObject(obj)
+    if obj:IsA("BasePart") then
+        if isMyCharacter(obj) then return end
+        if obj:GetAttribute("TimeStopEffect") then return end
+        if frozenParts[obj] then return end
+
+        frozenParts[obj] = {
+            cframe = obj.CFrame,
+            velocity = obj.AssemblyLinearVelocity,
+            angular = obj.AssemblyAngularVelocity,
+            anchored = obj.Anchored
+        }
+        obj.AssemblyLinearVelocity = Vector3.zero
+        obj.AssemblyAngularVelocity = Vector3.zero
+        obj.Anchored = true
+
+    elseif obj:IsA("Motor6D") then
+        if isMyCharacter(obj) then return end
+        if not frozenMotors[obj] then
+            frozenMotors[obj] = obj.Transform
+        end
+
+    elseif obj:IsA("ParticleEmitter") then
+        if isMyCharacter(obj) then return end
+        if not frozenParticles[obj] then
+            frozenParticles[obj] = {
+                enabled = obj.Enabled,
+                scale = obj.TimeScale
+            }
+            obj.Enabled = false
+            obj.TimeScale = 0
+        end
+
+    elseif obj:IsA("Trail") then
+        if isMyCharacter(obj) then return end
+        if not frozenTrails[obj] then
+            frozenTrails[obj] = obj.Enabled
+            obj.Enabled = false
+        end
+
+    elseif obj:IsA("Beam") then
+        if isMyCharacter(obj) then return end
+        if not frozenBeams[obj] then
+            frozenBeams[obj] = obj.Enabled
+            obj.Enabled = false
+        end
+
+    elseif obj:IsA("Sound") then
+        if isMyCharacter(obj) then return end
+        if not frozenSounds[obj] then
+            frozenSounds[obj] = {
+                playing = obj.Playing,
+                position = obj.TimePosition
+            }
+            if obj.Playing then
+                obj:Pause()
+            end
+        end
+    end
+end
+
+local function restoreWorld()
+    for obj, data in pairs(frozenParts) do
+        if obj and obj.Parent then
+            obj.Anchored = data.anchored
+            obj.CFrame = data.cframe
+            obj.AssemblyLinearVelocity = data.velocity
+            obj.AssemblyAngularVelocity = data.angular
+        end
+    end
+
+    for motor, transform in pairs(frozenMotors) do
+        if motor and motor.Parent then
+            motor.Transform = transform
+        end
+    end
+
+    for emitter, data in pairs(frozenParticles) do
+        if emitter and emitter.Parent then
+            emitter.Enabled = data.enabled
+            emitter.TimeScale = data.scale
+        end
+    end
+
+    for trail, enabled in pairs(frozenTrails) do
+        if trail and trail.Parent then
+            trail.Enabled = enabled
+        end
+    end
+
+    for beam, enabled in pairs(frozenBeams) do
+        if beam and beam.Parent then
+            beam.Enabled = enabled
+        end
+    end
+
+    for sound, data in pairs(frozenSounds) do
+        if sound and sound.Parent then
+            sound.TimePosition = data.position
+            if data.playing then
+                sound:Resume()
+            end
+        end
+    end
+
+    table.clear(frozenParts)
+    table.clear(frozenMotors)
+    table.clear(frozenParticles)
+    table.clear(frozenTrails)
+    table.clear(frozenBeams)
+    table.clear(frozenSounds)
+end
+
+local function maintainFreeze()
+    if not timeStopped then return end
+
+    local now = os.clock()
+    if now - lastFreezeUpdate < FREEZE_UPDATE then return end
+    lastFreezeUpdate = now
+
+    for obj, data in pairs(frozenParts) do
+        if obj and obj.Parent then
+            if not isMyCharacter(obj) then
+                if not obj.Anchored then
+                    obj.CFrame = data.cframe
+                    obj.AssemblyLinearVelocity = Vector3.zero
+                    obj.AssemblyAngularVelocity = Vector3.zero
+                    obj.Anchored = true
+                end
+            end
+        end
+    end
+
+    for motor, transform in pairs(frozenMotors) do
+        if motor and motor.Parent then
+            if not isMyCharacter(motor) then
+                motor.Transform = transform
+            end
+        end
+    end
+end
+
+--==================================================
+-- NOCLIP
+--==================================================
+
+local function enableNoclip()
+    local character = getCharacter()
+    if not character then return end
+    for _, part in ipairs(character:GetDescendants()) do
+        if part:IsA("BasePart") then
+            noclipData[part] = part.CanCollide
+            part.CanCollide = false
+        end
+    end
+end
+
+local function disableNoclip()
+    local character = getCharacter()
+    if not character then return end
+    for part, oldValue in pairs(noclipData) do
+        if part and part.Parent then
+            part.CanCollide = oldValue
+        end
+    end
+    table.clear(noclipData)
+end
+
+--==================================================
+-- DESYNC + FLY (исправлено направление)
+--==================================================
+
+local function startDesync()
+    local root = getRoot()
+    if not root then return end
+
+    savedRootCFrame = root.CFrame
+    isDesyncing = true
+    isFlying = true
+
+    root.Anchored = true
+    root.AssemblyLinearVelocity = Vector3.zero
+    root.AssemblyAngularVelocity = Vector3.zero
+
+    local humanoid = getHumanoid()
+    if humanoid then
+        humanoid.PlatformStand = true
+    end
+
+    if moveUpdateConnection then moveUpdateConnection:Disconnect() end
+    moveUpdateConnection = RunService.RenderStepped:Connect(function(deltaTime)
+        if not isDesyncing then return end
+
+        local root = getRoot()
+        local humanoid = getHumanoid()
+        if not root or not humanoid then return end
+
+        -- Собираем ввод
+        local moveVector = Vector3.new(0, 0, 0)
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+            moveVector = moveVector + Vector3.new(0, 0, 1)   -- вперёд
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+            moveVector = moveVector + Vector3.new(0, 0, -1)  -- назад
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+            moveVector = moveVector + Vector3.new(-1, 0, 0)  -- влево
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+            moveVector = moveVector + Vector3.new(1, 0, 0)   -- вправо
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+            moveVector = moveVector + Vector3.new(0, 1, 0)   -- вверх
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+            moveVector = moveVector + Vector3.new(0, -1, 0)  -- вниз
+        end
+
+        if moveVector.Magnitude > 0 then
+            moveVector = moveVector.Unit
+            local camera = workspace.CurrentCamera
+            if camera then
+                local forward = camera.CFrame.LookVector
+                local right = camera.CFrame.RightVector
+                local up = camera.CFrame.UpVector
+                forward = Vector3.new(forward.X, 0, forward.Z).Unit
+                right = Vector3.new(right.X, 0, right.Z).Unit
+                if forward.Magnitude > 0 and right.Magnitude > 0 then
+                    local moveDir = (forward * moveVector.Z + right * moveVector.X + up * moveVector.Y)
+                    local step = moveDir * flySpeed * deltaTime
+                    root.CFrame = root.CFrame + step
+                end
+            else
+                local step = moveVector * flySpeed * deltaTime
+                root.CFrame = root.CFrame + step
+            end
+        end
+        root.Anchored = true
+    end)
+end
+
+local function stopDesync()
+    isDesyncing = false
+    isFlying = false
+    if moveUpdateConnection then
+        moveUpdateConnection:Disconnect()
+        moveUpdateConnection = nil
+    end
+
+    local root = getRoot()
+    if root then
+        root.Anchored = false
+    end
+
+    local humanoid = getHumanoid()
+    if humanoid then
+        humanoid.PlatformStand = false
+    end
+
+    savedRootCFrame = nil
+end
+
+--==================================================
+-- START / STOP TIME STOP
+--==================================================
+
+local function startTimeStop()
+    if timeStopped then return end
+
+    local character = getCharacter()
+    if not character then return end
+
+    local humanoid = getHumanoid()
+    local root = getRoot()
+    if not humanoid or not root then return end
+
+    timeStopped = true
+
+    table.clear(frozenParts)
+    table.clear(frozenMotors)
+    table.clear(frozenParticles)
+    table.clear(frozenTrails)
+    table.clear(frozenBeams)
+    table.clear(frozenSounds)
+
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        freezeObject(obj)
+    end
+
+    enableNoclip()
+    startDesync()
+
+    colorEffect.Enabled = true
+    status.Visible = true
+end
+
+local function stopTimeStop()
+    if not timeStopped then return end
+
+    local character = getCharacter()
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    local finalPosition = root and root.Position or nil
+
+    timeStopped = false
+
+    stopDesync()
+    restoreWorld()
+    disableNoclip()
+
+    colorEffect.Enabled = false
+    status.Visible = false
+
+    if finalPosition then
+        task.defer(function()
+            local newCharacter = player.Character
+            if not newCharacter then return end
+            local newRoot = newCharacter:FindFirstChild("HumanoidRootPart")
+            if newRoot then
+                newRoot.CFrame = CFrame.new(finalPosition)
+            end
+        end)
+    end
+end
+
+--==================================================
+-- ПОДКЛЮЧЕНИЕ ИНСТРУМЕНТА
+--==================================================
+
+local function connectTool(t)
+    if not t then return end
+    if t:GetAttribute("Connected") then return end
+    t:SetAttribute("Connected", true)
+
+    t.Activated:Connect(function()
+        if not player.Character then return end
+        if t.Parent ~= player.Character then return end
+        if timeStopped then
+            stopTimeStop()
+        else
+            startTimeStop()
+        end
+    end)
+
+    t.Unequipped:Connect(function()
+        if timeStopped then
+            stopTimeStop()
+        end
+    end)
+end
+
+--==================================================
+-- ВЫДАЧА ИНСТРУМЕНТА
+--==================================================
+
+local function setupStarterGear()
+    local starterGear = player:WaitForChild("StarterGear")
+    for _, obj in ipairs(starterGear:GetChildren()) do
+        if obj.Name == TOOL_NAME then
+            obj:Destroy()
+        end
+    end
+    createTool(starterGear)
+end
+
+local function giveTool()
+    local backpack = player:WaitForChild("Backpack")
+    local existing = backpack:FindFirstChild(TOOL_NAME)
+    if existing then
+        tool = existing
+        connectTool(existing)
+        return
+    end
+    if player.Character then
+        local equipped = player.Character:FindFirstChild(TOOL_NAME)
+        if equipped then
+            tool = equipped
+            connectTool(equipped)
+            return
+        end
+    end
+    local newTool = createTool(backpack)
+    tool = newTool
+    connectTool(newTool)
+end
+
+setupStarterGear()
+giveTool()
+
+player.CharacterAdded:Connect(function()
+    if timeStopped then stopTimeStop() end
+    task.wait(0.5)
+    giveTool()
+    task.delay(1, giveTool)
+    task.delay(2, giveTool)
+end)
+
+task.spawn(function()
+    while true do
+        task.wait(1)
+        local backpack = player:FindFirstChild("Backpack")
+        if not backpack then continue end
+        local inBackpack = backpack:FindFirstChild(TOOL_NAME)
+        local inCharacter = player.Character and player.Character:FindFirstChild(TOOL_NAME)
+        if not inBackpack and not inCharacter then
+            giveTool()
+        end
+    end
+end)
+
+--==================================================
+-- ЦИКЛЫ ОБНОВЛЕНИЯ
+--==================================================
+
+RunService.RenderStepped:Connect(function()
+    if timeStopped then
+        maintainFreeze()
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    if not timeStopped then return end
+    local character = player.Character
+    if not character then return end
+    local animate = character:FindFirstChild("Animate")
+    if animate then animate.Enabled = true end
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.PlatformStand = false
+        humanoid.AutoRotate = true
+    end
+end)
+
+print("[Golden Time Stop] Загружен. Нажми на инструмент для активации. Полёт: WASD, Пробел — вверх, Shift — вниз.")
